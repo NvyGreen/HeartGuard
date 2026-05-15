@@ -8,6 +8,30 @@ page = st.sidebar.selectbox("Navigate", ["Model Metrics", "Patient Prediction"])
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 METRICS_PATH = os.path.join(BASE_DIR, '..', 'notebooks', 'metrics.csv')
 
+RISK_THRESHOLDS = {
+    "HIGH":   0.7,
+    "MEDIUM": 0.4,
+}
+
+RISK_LABELS = {
+    "HIGH":   "High Risk",
+    "MEDIUM": "Medium Risk",
+    "LOW":    "Low Risk",
+}
+
+RISK_URGENCY = {
+    "HIGH":   "critical",
+    "MEDIUM": "moderate",
+    "LOW":    "low",
+}
+
+RISK_COLORS = {
+    "HIGH":   "#FF4B4B",
+    "MEDIUM": "#FFA500",
+    "LOW":    "#00C853",
+}
+
+
 if page == "Model Metrics":
     st.title("Model Metrics")
     st.caption("Repeated Stratified K-Fold (5 splits x 10 repeats = 50 evaluations)")
