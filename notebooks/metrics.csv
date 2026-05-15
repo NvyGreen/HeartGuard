@@ -1,0 +1,5 @@
+Metric,Mean,Std,Min,Max
+Accuracy,0.74,0.053,0.617,0.867
+ROC-AUC,0.785,0.056,0.651,0.891
+F1 Score,0.611,0.082,0.343,0.778
+Overfitting Gap,0.051,,,
