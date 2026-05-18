@@ -4,6 +4,8 @@ import pandas as pd
 
 st.set_page_config(page_title="Heart Failure Prediction", layout="wide")
 page = st.sidebar.selectbox("Navigate", ["Model Metrics", "Patient Prediction", "Feature Importance"])
+st.sidebar.divider()
+st.sidebar.warning("**DISCLAIMER**: This tool is for educational/demo use and should not be taken as medical advice")
 
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 METRICS_PATH = os.path.join(BASE_DIR, '..', 'notebooks', 'metrics.csv')
