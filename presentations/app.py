@@ -3,13 +3,30 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(page_title="Heart Failure Prediction", layout="wide")
-page = st.sidebar.selectbox("Navigate", ["Model Metrics", "Patient Prediction", "Feature Importance"])
+
+def kpi_card(label: str, value: str, color: str = "#4B9EFF", help: str = "") -> str:
+    return f"""
+        <div style="
+            background-color: #1e1e2e;
+            border-left: 4px solid {color};
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin: 4px;
+        ">
+            <p style="margin:0; font-size:0.85rem; color:#aaaacc;">{label}</p>
+            <p style="margin:4px 0 0 0; font-size:2rem; font-weight:700; color:#ffffff;">{value}</p>
+            <p style="margin:4px 0 0 0; font-size:0.75rem; color:#888899;">{help}</p>
+        </div>
+    """
+
+page = st.sidebar.selectbox("Navigate", ["Dashboard", "Model Metrics", "Patient Prediction", "Feature Importance"])
 st.sidebar.divider()
 st.sidebar.warning("**DISCLAIMER**: This tool is for educational/demo use and should not be taken as medical advice")
 
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 METRICS_PATH = os.path.join(BASE_DIR, '..', 'notebooks', 'metrics.csv')
 IMPORTANCE_PATH = os.path.join(BASE_DIR, '..', 'notebooks', 'feature_importance.csv')
+PREDICTIONS_PATH = os.path.join(BASE_DIR, '..', 'notebooks', 'predictions.csv')
 
 RISK_THRESHOLDS = {
     "HIGH":   0.7,
@@ -34,8 +51,28 @@ RISK_COLORS = {
     "LOW":    "#00C853",
 }
 
+if page == "Dashboard":
+    st.title("Heart Failure — Patient Dashboard")
+    st.caption("Summary statistics derived from model predictions on the full dataset.")
 
-if page == "Model Metrics":
+    predictions_df = pd.read_csv(PREDICTIONS_PATH)
+
+    # ── Backend Calculations ──────────────────────────────────────────────
+    patient_count      = len(predictions_df)
+    observed_mortality = predictions_df['DEATH_EVENT'].mean() * 100
+    high_risk_count    = (predictions_df['probability'] >= RISK_THRESHOLDS['HIGH']).sum()
+    avg_predicted_risk = predictions_df['probability'].mean() * 100
+
+    # ── KPI Cards ─────────────────────────────────────────────────────────
+    st.subheader("Overview")
+    col1, col2, col3, col4 = st.columns(4)
+
+    col1.markdown(kpi_card("Total Patients",      f"{patient_count:,}",          "#4B9EFF"), unsafe_allow_html=True)
+    col2.markdown(kpi_card("Observed Mortality",  f"{observed_mortality:.1f}%",  "#FFA500"), unsafe_allow_html=True)
+    col3.markdown(kpi_card("High Risk Patients",  f"{high_risk_count:,}",        "#FF4B4B", f"{high_risk_count / patient_count * 100:.1f}% of total"), unsafe_allow_html=True)
+    col4.markdown(kpi_card("Avg Predicted Risk",  f"{avg_predicted_risk:.1f}%",  "#A855F7", "Mean probability across all patients"), unsafe_allow_html=True)
+
+elif page == "Model Metrics":
     st.title("Model Metrics")
     st.caption("Repeated Stratified K-Fold (5 splits x 10 repeats = 50 evaluations)")
 
