@@ -294,26 +294,42 @@ elif page == "Model Metrics":
     gap_row     = metrics_df[metrics_df['Metric'] == 'Overfitting Gap']
     metrics_df  = metrics_df[metrics_df['Metric'] != 'Overfitting Gap']
 
-    # --- KPI cards for Mean scores ---
+    # ── Row 1 — Core metrics ──────────────────────────────────────────────
     st.subheader("Summary")
     col1, col2, col3 = st.columns(3)
 
-    for col, row in zip(
-        [col1, col2, col3],
-        metrics_df.itertuples()
-    ):
-        col.metric(label=row.Metric, value=f"{row.Mean:.3f}")
-    
-    # --- Overfitting gap ---
+    def get_metric(name):
+        return metrics_df[metrics_df['Metric'] == name].iloc[0]
+
+    accuracy  = get_metric('Accuracy')
+    roc_auc   = get_metric('ROC-AUC')
+    f1        = get_metric('F1 Score')
+    precision = get_metric('Precision')
+    recall    = get_metric('Recall')
+
+    col1.markdown(kpi_card("Accuracy",  f"{accuracy['Mean']:.3f}",  "#4B9EFF"), unsafe_allow_html=True)
+    col2.markdown(kpi_card("ROC-AUC",   f"{roc_auc['Mean']:.3f}",   "#4B9EFF"), unsafe_allow_html=True)
+    col3.markdown(kpi_card("F1 Score",  f"{f1['Mean']:.3f}",        "#4B9EFF"), unsafe_allow_html=True)
+
+    # ── Row 2 — Precision & Recall ────────────────────────────────────────
+    prec_col, rec_col, gap_col = st.columns(3)
+
+    prec_col.markdown(kpi_card("Precision", f"{precision['Mean']:.3f}", "#A855F7",
+        "Of patients flagged high risk, how many actually died"), unsafe_allow_html=True)
+    rec_col.markdown(kpi_card("Recall",     f"{recall['Mean']:.3f}",    "#A855F7",
+        "Of patients who died, how many did the model catch"), unsafe_allow_html=True)
+
     gap = gap_row['Mean'].values[0]
-    st.metric(
-        label="Overfitting Gap (train - test)",
-        value=f"{gap:.3f}"
-    )
+    gap_col.markdown(kpi_card(
+        "Overfitting Gap",
+        f"{gap:.3f}",
+        "#00C853" if gap < 0.05 else "#FFA500",
+        "Good" if gap < 0.05 else "Potential overfit"
+    ), unsafe_allow_html=True)
 
     st.divider()
 
-    # --- Full metrics table ---
+    # ── Full table ────────────────────────────────────────────────────────
     st.subheader("Full Cross-Validation Results")
     st.dataframe(
         metrics_df.set_index('Metric'),
