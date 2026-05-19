@@ -72,6 +72,18 @@ if page == "Dashboard":
     col3.markdown(kpi_card("High Risk Patients",  f"{high_risk_count:,}",        "#FF4B4B", f"{high_risk_count / patient_count * 100:.1f}% of total"), unsafe_allow_html=True)
     col4.markdown(kpi_card("Avg Predicted Risk",  f"{avg_predicted_risk:.1f}%",  "#A855F7", "Mean probability across all patients"), unsafe_allow_html=True)
 
+    st.divider()
+    st.subheader("Risk Distribution")
+
+    low_count    = (predictions_df['probability'] <  RISK_THRESHOLDS['MEDIUM']).sum()
+    medium_count = (predictions_df['probability'] >= RISK_THRESHOLDS['MEDIUM']).sum() - high_risk_count
+
+    risk_col1, risk_col2, risk_col3 = st.columns(3)
+
+    risk_col1.markdown(kpi_card("Low Risk",    f"{low_count:,}",       "#00C853", f"{low_count / patient_count * 100:.1f}% of total"),    unsafe_allow_html=True)
+    risk_col2.markdown(kpi_card("Medium Risk", f"{medium_count:,}",    "#FFA500", f"{medium_count / patient_count * 100:.1f}% of total"), unsafe_allow_html=True)
+    risk_col3.markdown(kpi_card("High Risk",   f"{high_risk_count:,}", "#FF4B4B", f"{high_risk_count / patient_count * 100:.1f}% of total"),   unsafe_allow_html=True)
+
 elif page == "Model Metrics":
     st.title("Model Metrics")
     st.caption("Repeated Stratified K-Fold (5 splits x 10 repeats = 50 evaluations)")
