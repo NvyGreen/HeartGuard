@@ -470,6 +470,11 @@ if "Dashboard" in page:
     st.markdown('<span style="color:#e6edf3;font-size:1.1rem;font-weight:600;">Key Insights</span>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
+    importance_df = pd.read_csv(IMPORTANCE_PATH)
+    top4 = importance_df.head(4)['Feature'].tolist()
+    top4_labels = [FEATURE_LABELS.get(f, f).split(' (')[0] for f in top4]
+    top4_str    = ', '.join(top4_labels)
+
     ki1, ki2, ki3, ki4 = st.columns(4)
     ki1.markdown(f"""<div class="section-card" style="text-align:center;">
         <div style="font-size:1.5rem;margin-bottom:0.5rem;">👥</div>
@@ -489,7 +494,7 @@ if "Dashboard" in page:
     ki4.markdown(f"""<div class="section-card" style="text-align:center;">
         <div style="font-size:1.5rem;margin-bottom:0.5rem;">💡</div>
         <div style="font-size:0.85rem;font-weight:600;color:#bc8cff;margin-bottom:0.25rem;">Top risk drivers include:</div>
-        <div style="font-size:0.78rem;color:#8b949e;">Ejection Fraction, Serum Creatinine, Serum Sodium, Age.</div>
+        <div style="font-size:0.78rem;color:#8b949e;">{top4_str}.</div>
     </div>""", unsafe_allow_html=True)
 
     st.markdown("""<div class="footer">
