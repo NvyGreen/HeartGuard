@@ -2,6 +2,7 @@ import os
 import streamlit as st
 import pandas as pd
 from datetime import date
+import plotly.express as px
 
 st.set_page_config(
     page_title="Heart Failure Risk Stratification",
@@ -496,6 +497,160 @@ if "Dashboard" in page:
         <div style="font-size:0.85rem;font-weight:600;color:#bc8cff;margin-bottom:0.25rem;">Top risk drivers include:</div>
         <div style="font-size:0.78rem;color:#8b949e;">{top4_str}.</div>
     </div>""", unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<span style="color:#e6edf3;font-size:1.1rem;font-weight:600;">Cohort Risk Patterns</span>', unsafe_allow_html=True)
+    st.markdown('<span style="color:#8b949e;font-size:0.85rem;">Mortality and high-risk trends across key clinical indicators.</span>', unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    df_full = pd.read_csv(DATA_PATH)
+    df_full['risk_category'] = predictions_df['probability'].apply(
+        lambda p: 'High Risk' if p >= RISK_THRESHOLDS['HIGH']
+        else ('Medium Risk' if p >= RISK_THRESHOLDS['MEDIUM'] else 'Low Risk')
+    )
+    df_full['probability'] = predictions_df['probability']
+
+    COHORT_PLOTLY = dict(
+        paper_bgcolor="#161b22",
+        plot_bgcolor="#161b22",
+        font_color="#c9d1d9",
+        margin=dict(t=30, b=30, l=10, r=10),
+        height=280,
+        xaxis=dict(gridcolor="#30363d"),
+        yaxis=dict(gridcolor="#30363d"),
+    )
+
+    row1_col1, row1_col2, row1_col3 = st.columns(3)
+
+    # ── Chart 1 — Mortality rate by ejection fraction band ────────────────
+    with row1_col1:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown('<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">Mortality Rate by Ejection Fraction</span>', unsafe_allow_html=True)
+
+        df_full['ef_band'] = pd.cut(
+            df_full['ejection_fraction'],
+            bins=[0, 20, 30, 40, 55, 100],
+            labels=['≤20%', '21–30%', '31–40%', '41–55%', '>55%']
+        )
+        ef_mortality = df_full.groupby('ef_band', observed=True)['DEATH_EVENT'].mean() * 100
+        ef_df = ef_mortality.reset_index()
+        ef_df.columns = ['EF Band', 'Mortality Rate (%)']
+
+        fig_ef = px.bar(ef_df, x='EF Band', y='Mortality Rate (%)',
+                        color='Mortality Rate (%)',
+                        color_continuous_scale=['#3fb950', '#e3b341', '#f85149'])
+        fig_ef.update_layout(**COHORT_PLOTLY, coloraxis_showscale=False)
+        st.plotly_chart(fig_ef, use_container_width=True)
+        st.markdown('<div class="info-box">ℹ️ Lower ejection fraction bands show higher observed mortality rates.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Chart 2 — Mortality rate by serum creatinine band ─────────────────
+    with row1_col2:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown('<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">Mortality Rate by Serum Creatinine</span>', unsafe_allow_html=True)
+
+        df_full['sc_band'] = pd.cut(
+            df_full['serum_creatinine'],
+            bins=[0, 1.2, 2.0, 4.0, 100],
+            labels=['≤1.2', '1.2–2.0', '2.0–4.0', '>4.0']
+        )
+        sc_mortality = df_full.groupby('sc_band', observed=True)['DEATH_EVENT'].mean() * 100
+        sc_df = sc_mortality.reset_index()
+        sc_df.columns = ['Creatinine Band', 'Mortality Rate (%)']
+
+        fig_sc = px.bar(sc_df, x='Creatinine Band', y='Mortality Rate (%)',
+                        color='Mortality Rate (%)',
+                        color_continuous_scale=['#3fb950', '#e3b341', '#f85149'])
+        fig_sc.update_layout(**COHORT_PLOTLY, coloraxis_showscale=False)
+        st.plotly_chart(fig_sc, use_container_width=True)
+        st.markdown('<div class="info-box">ℹ️ Elevated creatinine is associated with higher observed mortality.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Chart 3 — Mortality rate by age band ──────────────────────────────
+    with row1_col3:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown('<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">Mortality Rate by Age Group</span>', unsafe_allow_html=True)
+
+        df_full['age_band'] = pd.cut(
+            df_full['age'],
+            bins=[0, 50, 60, 70, 80, 120],
+            labels=['<50', '50–60', '60–70', '70–80', '>80']
+        )
+        age_mortality = df_full.groupby('age_band', observed=True)['DEATH_EVENT'].mean() * 100
+        age_df = age_mortality.reset_index()
+        age_df.columns = ['Age Group', 'Mortality Rate (%)']
+
+        fig_age = px.bar(age_df, x='Age Group', y='Mortality Rate (%)',
+                         color='Mortality Rate (%)',
+                         color_continuous_scale=['#3fb950', '#e3b341', '#f85149'])
+        fig_age.update_layout(**COHORT_PLOTLY, coloraxis_showscale=False)
+        st.plotly_chart(fig_age, use_container_width=True)
+        st.markdown('<div class="info-box">ℹ️ Mortality rate increases with age across the dataset.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    row2_col1, row2_col2 = st.columns(2)
+
+    # ── Chart 4 — High risk count by boolean risk factors ─────────────────
+    with row2_col1:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown('<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">High Risk Rate by Clinical Condition</span>', unsafe_allow_html=True)
+
+        conditions = {
+            'Diabetes':           'diabetes',
+            'High Blood Pressure':'high_blood_pressure',
+            'Anaemia':            'anaemia',
+            'Smoking':            'smoking',
+        }
+        condition_rows = []
+        for label, col in conditions.items():
+            present     = df_full[df_full[col] == 1]
+            high_risk_r = (present['probability'] >= RISK_THRESHOLDS['HIGH']).mean() * 100
+            mortality_r = present['DEATH_EVENT'].mean() * 100
+            condition_rows.append({
+                'Condition':       label,
+                'High Risk Rate (%)': round(high_risk_r, 1),
+                'Mortality Rate (%)': round(mortality_r, 1),
+            })
+        cond_df = pd.DataFrame(condition_rows)
+
+        fig_cond = px.bar(
+            cond_df.melt(id_vars='Condition', var_name='Metric', value_name='Rate (%)'),
+            x='Condition', y='Rate (%)', color='Metric', barmode='group',
+            color_discrete_map={
+                'High Risk Rate (%)': '#f85149',
+                'Mortality Rate (%)': '#e3b341'
+            }
+        )
+        fig_cond.update_layout(**{**COHORT_PLOTLY, 'height': 300},
+                       legend=dict(orientation="h", y=1.1, font_color="#c9d1d9"))
+        st.plotly_chart(fig_cond, use_container_width=True)
+        st.markdown('<div class="info-box">ℹ️ Patients with these conditions show elevated high-risk and mortality rates.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Chart 5 — Predicted risk distribution histogram ───────────────────
+    with row2_col2:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown('<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">Predicted Risk Score Distribution</span>', unsafe_allow_html=True)
+
+        fig_hist = px.histogram(
+            df_full, x='probability', nbins=20,
+            color_discrete_sequence=['#58a6ff'],
+        )
+        fig_hist.add_vline(x=RISK_THRESHOLDS['MEDIUM'], line_dash='dash',
+                           line_color='#e3b341',
+                           annotation_text='Medium threshold',
+                           annotation_font_color='#e3b341')
+        fig_hist.add_vline(x=RISK_THRESHOLDS['HIGH'], line_dash='dash',
+                           line_color='#f85149',
+                           annotation_text='High threshold',
+                           annotation_font_color='#f85149')
+        fig_hist.update_layout(**{**COHORT_PLOTLY, 'height': 300},
+                       xaxis_title='Predicted Probability',
+                       yaxis_title='Patient Count')
+        st.plotly_chart(fig_hist, use_container_width=True)
+        st.markdown('<div class="info-box">ℹ️ Dashed lines show Medium (0.40) and High (0.70) risk thresholds.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("""<div class="footer">
         <span>❤️ Heart Failure Risk Stratification & Recommendation System &nbsp;|&nbsp; Built with Streamlit, Scikit-learn, Pandas</span>
