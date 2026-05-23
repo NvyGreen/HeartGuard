@@ -18,3 +18,5 @@ The system aims to support earlier identification of heart failure patients whos
 
 ## Weekly Progress Log
 Week 1: Set up the heart failure dataset and completed data validation and cleaning. Analyzed historical outcome distribution (DEATH_EVENT) and prepared model features (X and y) for training. Generated patient_id values for patient lookup in the dashboard. Built the core prediction pipeline to generate patient risk scores and implemented the recommendation engine to provide follow-up and escalation guidance based on patient risk patterns.
+
+Week 2: Built out the Streamlit dashboard with five core screens — an Overview Dashboard displaying KPI cards including patient count, observed mortality rate, high-risk count, and average predicted risk; a Risk Distribution chart showing patient counts across Low, Medium, and High risk categories; a Patient Review screen enabling lookup by patient ID with full prediction details, risk category, top risk factors, and recommendation output; a Model Metrics panel displaying accuracy, precision, recall, and F1-score; and a Feature Importance chart visualizing the top clinical indicators driving model predictions.
