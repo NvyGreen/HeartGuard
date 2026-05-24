@@ -992,9 +992,61 @@ elif "Patient Review" in page:
 
         outcome_context = (
             "This patient experienced an adverse outcome during the follow-up period."
-            if actual == 1 else
-            "This patient survived the follow-up period without an adverse outcome."
+            if actual == 1
+            else "This patient survived the follow-up period without an adverse outcome."
         )
+
+        risk_level_str = (
+            "high-risk" if prob >= RISK_THRESHOLDS["HIGH"]
+            else "moderate-risk" if prob >= RISK_THRESHOLDS["MEDIUM"]
+            else "low-risk"
+        )
+        elevation_str = "elevated" if prob >= RISK_THRESHOLDS["MEDIUM"] else "predicted"
+
+        key_driver_block = (
+            '<div style="display:flex;gap:0.75rem;align-items:flex-start;">'
+            '<div style="background:#f85149;border-radius:50%;width:22px;height:22px;display:flex;'
+            'align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">'
+            '<span style="font-size:0.65rem;font-weight:700;color:#fff;">K</span>'
+            '</div>'
+            f'<div style="font-size:0.83rem;color:#c9d1d9;line-height:1.5;">'
+            f'<b style="color:#f85149;">Key Driver:</b> {key_driver_str.capitalize()} contributed most to the {elevation_str} risk.'
+            '</div>'
+            '</div>'
+        )
+
+        if comorbidity_str:
+            if prob >= RISK_THRESHOLDS["MEDIUM"]:
+                comorbidity_sentence = f"History of {comorbidity_str} further increases overall risk."
+            else:
+                comorbidity_sentence = f"History of {comorbidity_str} also contributes to the overall risk profile."
+            comorbidity_block = (
+                '<div style="display:flex;gap:0.75rem;align-items:flex-start;">'
+                '<div style="background:#e3b341;border-radius:50%;width:22px;height:22px;display:flex;'
+                'align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">'
+                '<span style="font-size:0.65rem;font-weight:700;color:#fff;">C</span>'
+                '</div>'
+                f'<div style="font-size:0.83rem;color:#c9d1d9;line-height:1.5;">'
+                f'<b style="color:#e3b341;">Comorbidity Impact:</b> {comorbidity_sentence}'
+                '</div>'
+                '</div>'
+            )
+        else:
+            comorbidity_block = ""
+
+        outcome_block = (
+            '<div style="display:flex;gap:0.75rem;align-items:flex-start;">'
+            '<div style="background:#58a6ff;border-radius:50%;width:22px;height:22px;display:flex;'
+            'align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">'
+            '<span style="font-size:0.65rem;font-weight:700;color:#fff;">O</span>'
+            '</div>'
+            f'<div style="font-size:0.83rem;color:#c9d1d9;line-height:1.5;">'
+            f'<b style="color:#58a6ff;">Outcome Context:</b> {outcome_context}'
+            '</div>'
+            '</div>'
+        )
+
+        inner_blocks = key_driver_block + comorbidity_block + outcome_block
 
         st.markdown(f"""
         <div class="section-card" style="margin-top:1rem;">
@@ -1004,36 +1056,10 @@ elif "Patient Review" in page:
             </div>
             <p style="font-size:0.85rem;color:#8b949e;margin:0 0 0.75rem 0;">
                 Based on the provided clinical indicators, the model identified patterns commonly
-                associated with {"high-risk" if prob >= RISK_THRESHOLDS["HIGH"] else "moderate-risk" if prob >= RISK_THRESHOLDS["MEDIUM"] else "low-risk"} outcomes in similar historical cases.
+                associated with {risk_level_str} outcomes in similar historical cases.
             </p>
             <div style="display:flex;flex-direction:column;gap:0.6rem;">
-                <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-                    <div style="background:#f85149;border-radius:50%;width:22px;height:22px;display:flex;
-                         align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
-                        <span style="font-size:0.65rem;font-weight:700;color:#fff;">K</span>
-                    </div>
-                    <div style="font-size:0.83rem;color:#c9d1d9;line-height:1.5;">
-                        <b style="color:#f85149;">Key Driver:</b> {key_driver_str.capitalize()} contributed most to the {"elevated" if prob >= RISK_THRESHOLDS["MEDIUM"] else "predicted"} risk.
-                    </div>
-                </div>
-                {f'''<div style="display:flex;gap:0.75rem;align-items:flex-start;">
-                    <div style="background:#e3b341;border-radius:50%;width:22px;height:22px;display:flex;
-                         align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
-                        <span style="font-size:0.65rem;font-weight:700;color:#fff;">C</span>
-                    </div>
-                    <div style="font-size:0.83rem;color:#c9d1d9;line-height:1.5;">
-                        <b style="color:#e3b341;">Comorbidity Impact:</b> History of {comorbidity_str} further {"increases" if prob >= RISK_THRESHOLDS["MEDIUM"] else "contributes to the"} overall risk.
-                    </div>
-                </div>''' if comorbidity_str else ''}
-                <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-                    <div style="background:#58a6ff;border-radius:50%;width:22px;height:22px;display:flex;
-                         align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
-                        <span style="font-size:0.65rem;font-weight:700;color:#fff;">O</span>
-                    </div>
-                    <div style="font-size:0.83rem;color:#c9d1d9;line-height:1.5;">
-                        <b style="color:#58a6ff;">Outcome Context:</b> {outcome_context}
-                    </div>
-                </div>
+                {inner_blocks}
             </div>
             <p style="font-size:0.75rem;color:#6e7681;margin:0.75rem 0 0 0;font-style:italic;">
                 This section provides retrospective interpretation and is <u>not</u> a recommendation for clinical action.
