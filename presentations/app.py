@@ -5,7 +5,7 @@ from datetime import date
 import plotly.express as px
 
 st.set_page_config(
-    page_title="Heart Failure Risk Stratification",
+    page_title="HeartGuard",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -31,6 +31,7 @@ html, body, [class*="css"] {
     border-right: 1px solid #30363d !important;
 }
 [data-testid="stSidebar"] * { color: #c9d1d9 !important; }
+[data-testid="stSidebar"] .logo-guard { color: #f85149 !important; }
 [data-testid="stSidebar"] .stSelectbox label { display: none; }
 section[data-testid="stSidebar"] > div { padding-top: 0 !important; }
 
@@ -358,14 +359,27 @@ def factor_bars(ranked, importance_map):
     # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
-    <div style="padding: 1.5rem 1rem 1rem 1rem; border-bottom: 1px solid #30363d; margin-bottom: 1rem;">
+    <div style="padding: 1.25rem 1rem 1rem 1rem; border-bottom: 1px solid #30363d; margin-bottom: 1rem;">
         <div style="display:flex; align-items:center; gap:0.75rem;">
-            <div style="background:#f85149; border-radius:50%; width:36px; height:36px;
-                        display:flex; align-items:center; justify-content:center; font-size:1.1rem;">❤️</div>
+            <div style="background:#1a0808; border:2px solid #f85149; border-radius:14px;
+                        width:52px; height:52px; display:flex; align-items:center;
+                        justify-content:center; flex-shrink:0;">
+                <svg width="36" height="36" viewBox="58 20 50 65" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M58 58 C58 48 65 42 72 42 C76 42 80 44 82 48 C84 44 88 42 92 42 C99 42 106 48 106 58 C106 70 82 82 82 82 C82 82 58 70 58 58Z"
+                          fill="#f85149" opacity="0.25"/>
+                    <path d="M58 58 C58 48 65 42 72 42 C76 42 80 44 82 48 C84 44 88 42 92 42 C99 42 106 48 106 58 C106 70 82 82 82 82 C82 82 58 70 58 58Z"
+                          fill="none" stroke="#f85149" stroke-width="1.8" stroke-linejoin="round"/>
+                    <polyline points="58,60 66,60 70,52 74,68 78,56 82,60 90,60 94,54 98,60 106,60"
+                              fill="none" stroke="#f85149" stroke-width="2"
+                              stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
             <div>
-                <div style="font-weight:700; font-size:0.95rem; color:#e6edf3;">Heart Failure</div>
-                <div style="font-size:0.72rem; color:#8b949e; line-height:1.3;">
-                    Risk Stratification &<br>Recommendation System
+                <div style="font-weight:800; font-size:1.1rem; color:#ffffff; letter-spacing:-0.02em;">
+                    Heart<span class="logo-guard">Guard</span>
+                </div>
+                <div style="font-size:0.68rem; color:#8b949e; line-height:1.5; margin-top:2px;">
+                    AI-Powered Heart Failure<br>Risk Intelligence
                 </div>
             </div>
         </div>
@@ -680,7 +694,7 @@ if "Dashboard" in page:
         st.markdown('<div class="info-box">ℹ️ Dashed lines show Medium (0.40) and High (0.70) risk thresholds.</div>', unsafe_allow_html=True)
 
     st.markdown("""<div class="footer">
-        <span>❤️ Heart Failure Risk Stratification & Recommendation System &nbsp;|&nbsp; Built with Streamlit, Scikit-learn, Pandas</span>
+        <span>❤️ HeartGuard AI-Powered Heart Failure Risk Intelligence &nbsp;|&nbsp; Built with Streamlit, Scikit-learn, Pandas</span>
         <span>For educational and research use only</span>
     </div>""", unsafe_allow_html=True)
 
@@ -1298,6 +1312,6 @@ elif "About" in page:
         </div>""", unsafe_allow_html=True)
 
     st.markdown("""<div class="footer">
-        <span>❤️ Heart Failure Risk Stratification & Recommendation System &nbsp;|&nbsp; Built with Streamlit, Scikit-learn, Pandas</span>
+        <span>❤️ HeartGuard AI-Powered Heart Failure Risk Intelligence &nbsp;|&nbsp; Built with Streamlit, Scikit-learn, Pandas</span>
         <span>© 2025 All rights reserved</span>
     </div>""", unsafe_allow_html=True)
