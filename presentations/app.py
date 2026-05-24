@@ -1100,29 +1100,76 @@ elif "Simulated" in page:
     rc = risk_category['color']
 
     with col_risk:
-        ranked_html = ""
-        if ranked:
-            total = sum(importance_map.get(f, 0) for f, _ in ranked) or 1
-            bar_colors = ["#f85149", "#e3b341", "#d29922", "#3fb950", "#58a6ff"]
-            for i, (feature, _) in enumerate(ranked[:5]):
-                imp   = importance_map.get(feature, 0)
-                pct   = round(imp / total * 100)
-                color = bar_colors[min(i, len(bar_colors)-1)]
-                label = FEATURE_LABELS.get(feature, feature).split(' (')[0]
-                ranked_html += f"""
-                <div class="factor-row">
-                    <div class="factor-label">{label}</div>
-                    <div class="factor-bar-bg">
-                        <div style="width:{pct}%;background:{color};height:10px;border-radius:4px;"></div>
-                    </div>
-                    <div class="factor-pct">{pct}%</div>
-                </div>"""
-            ranked_html += '<div style="font-size:0.75rem;color:#6e7681;">Relative contribution to prediction.</div>'
+        # Personalized contribution: importance × how abnormal the patient's value is
+        NORMAL_RANGES = {
+            'ejection_fraction':        (55, 70,   'low'),   # low = bad direction
+            'serum_creatinine':         (0.7, 1.2, 'high'),  # high = bad
+            'serum_sodium':             (135, 145, 'low'),   # low = bad
+            'age':                      (0,  60,   'high'),  # higher = worse
+            'creatinine_phosphokinase': (40, 308,  'high'),
+            'platelets':                (150000, 400000, None),  # both extremes bad
+            'ejection_fraction':        (55, 70,   'low'),
+        }
+
+        NORMAL_RANGES = {
+            'ejection_fraction':        (55,     70,     'low'),
+            'serum_creatinine':         (0.7,    1.2,    'high'),
+            'serum_sodium':             (135,    145,    'low'),
+            'age':                      (0,      60,     'high'),
+            'creatinine_phosphokinase': (40,     308,    'high'),
+            'platelets':                (150000, 400000, None),
+            'diabetes':                 (0,      0,      'high'),
+            'high_blood_pressure':      (0,      0,      'high'),
+            'anaemia':                  (0,      0,      'high'),
+            'smoking':                  (0,      0,      'high'),
+            'sex':                      (0,      1,      None),
+        }
+
+        def abnormality_score(feature, value):
+            if feature not in NORMAL_RANGES:
+                return 0
+            lo, hi, bad_dir = NORMAL_RANGES[feature]
+            if bad_dir == 'high':
+                return max(0, (value - hi) / (hi - lo + 1e-9))
+            elif bad_dir == 'low':
+                return max(0, (lo - value) / (hi - lo + 1e-9))
+            else:  # both extremes bad
+                mid = (lo + hi) / 2
+                return abs(value - mid) / ((hi - lo) / 2 + 1e-9)
+
+        personalized = {}
+        for feature in FEATURES:
+            imp   = importance_map.get(feature, 0)
+            val   = patient_sim[feature]
+            abnorm = abnormality_score(feature, val)
+            personalized[feature] = imp * (1 + abnorm)
+
+        total = sum(personalized.values()) or 1
+        top_features = sorted(personalized.items(), key=lambda x: x[1], reverse=True)[:5]
+
+        bar_colors = ["#f85149", "#e3b341", "#d29922", "#3fb950", "#58a6ff"]
+        top_factors_html = ""
+        for i, (feature, score) in enumerate(top_features):
+            pct   = round(score / total * 100)
+            color = bar_colors[min(i, len(bar_colors)-1)]
+            label = FEATURE_LABELS.get(feature, feature).split(' (')[0]
+            top_factors_html += (
+                '<div class="factor-row">'
+                f'<div class="factor-label">{label}</div>'
+                '<div class="factor-bar-bg">'
+                f'<div style="width:{pct}%;background:{color};height:10px;border-radius:4px;"></div>'
+                '</div>'
+                f'<div class="factor-pct">{pct}%</div>'
+                '</div>'
+            )
+        top_factors_html += '<div style="font-size:0.75rem;color:#6e7681;margin-top:0.25rem;">Based on model importance × how abnormal this patient\'s values are.</div>'
 
         factors_section = (
-            "<br><span style='color:#e6edf3;font-weight:600;'>Top Contributing Factors</span>"
-            + ranked_html
-        ) if ranked else ""
+            "<div style='margin-top:1rem;'>"
+            "<span style='color:#e6edf3;font-weight:600;font-size:0.9rem;'>Top Contributing Factors</span>"
+            "<div style='margin-top:0.5rem;'>" + top_factors_html + "</div>"
+            "</div>"
+        )
 
         st.markdown(f"""
         <div class="section-card">
