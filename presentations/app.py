@@ -355,7 +355,7 @@ def factor_bars(ranked, importance_map):
         )
     return html
 
-# ── Sidebar ────────────────────────────────────────────────────────────────────
+    # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
     <div style="padding: 1.5rem 1rem 1rem 1rem; border-bottom: 1px solid #30363d; margin-bottom: 1rem;">
@@ -372,14 +372,58 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    page = st.selectbox("Navigate", [
-        "🏠  Overview Dashboard",
-        "👤  Patient Review",
-        "📊  Model Performance",
-        "🎯  Feature Importance",
-        "🧪  Simulated Assessment",
-        "ℹ️  About / Project Info"
-    ], label_visibility="collapsed")
+    # Add nav button CSS
+    st.markdown("""
+    <style>
+    div[data-testid="stSidebar"] .stButton > button {
+        width: 100% !important;
+        text-align: left !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.6rem 1rem !important;
+        color: #8b949e !important;
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        margin-bottom: 2px !important;
+        transition: background 0.15s !important;
+    }
+    div[data-testid="stSidebar"] .stButton > button:hover {
+        background: #21262d !important;
+        color: #e6edf3 !important;
+        border: none !important;
+    }
+    div[data-testid="stSidebar"] .nav-active .stButton > button {
+        background: #21262d !important;
+        color: #e6edf3 !important;
+        border-left: 3px solid #58a6ff !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    if 'page' not in st.session_state:
+        st.session_state.page = "🏠  Overview Dashboard"
+
+    nav_items = [
+        ("🏠  Overview Dashboard",   "🏠  Overview Dashboard"),
+        ("👤  Patient Review",        "👤  Patient Review"),
+        ("📊  Model Performance",     "📊  Model Performance"),
+        ("🎯  Feature Importance",    "🎯  Feature Importance"),
+        ("🧪  Simulated Assessment",  "🧪  Simulated Assessment"),
+        ("ℹ️  About / Project Info",  "ℹ️  About / Project Info"),
+    ]
+
+    for label, key in nav_items:
+        is_active = st.session_state.page == key
+        if is_active:
+            st.markdown('<div class="nav-active">', unsafe_allow_html=True)
+        if st.button(label, key=f"nav_{key}"):
+            st.session_state.page = key
+            st.rerun()
+        if is_active:
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    page = st.session_state.page
 
     st.markdown("""
     <div class="disclaimer-box" style="margin-top:2rem;">
