@@ -1061,7 +1061,7 @@ elif "Simulated" in page:
     col_form, col_risk, col_rec = st.columns([1, 1, 1])
 
     with col_form:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        # st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<span style="color:#e6edf3;font-weight:600;">1. Enter Patient Indicators</span>', unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         age     = st.number_input("👤 Age (years)",               min_value=1,   max_value=120, value=65)
@@ -1192,7 +1192,7 @@ elif "Simulated" in page:
         </div>""", unsafe_allow_html=True)
 
     with col_rec:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        # st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<span style="color:#e6edf3;font-weight:600;">3. Recommendation</span>', unsafe_allow_html=True)
         cat = risk_category['category']
 
