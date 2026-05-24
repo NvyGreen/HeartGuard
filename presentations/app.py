@@ -1333,6 +1333,28 @@ elif "Feature Importance" in page:
 
     b1, b2 = st.columns(2)
 
+    st.markdown("""
+    <div style="background:#1a0d0d;border:1px solid #f8514933;border-radius:10px;padding:1rem 1.25rem;margin-top:1rem;">
+        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+            <span style="font-size:1.25rem;flex-shrink:0;">⚠️</span>
+            <div>
+                <div style="font-weight:600;color:#f85149;margin-bottom:0.4rem;font-size:0.9rem;">
+                    Association ≠ Causation
+                </div>
+                <div style="font-size:0.82rem;color:#c9d1d9;line-height:1.7;">
+                    The feature importance scores on this page reflect how strongly each clinical indicator
+                    is <b style="color:#e6edf3;">statistically associated</b> with adverse outcomes in this
+                    dataset — they do <b style="color:#e6edf3;">not</b> imply that any feature
+                    <i>causes</i> heart failure or death. For example, a high importance score for
+                    serum creatinine means the model frequently used it to distinguish outcomes,
+                    not that elevated creatinine directly causes mortality.
+                    Clinical decisions should always be guided by qualified healthcare professionals
+                    and established medical evidence.
+                </div>
+            </div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
     with b1:
         st.markdown(f"""
         <div class="section-card">
