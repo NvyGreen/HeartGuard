@@ -12,7 +12,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ── Global CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -23,11 +22,9 @@ html, body, [class*="css"] {
     color: #c9d1d9 !important;
 }
 
-/* Hide default Streamlit elements */
 #MainMenu, footer, header { visibility: hidden; }
 .block-container { padding: 0 2rem 2rem 2rem !important; }
 
-/* ── Sidebar ── */
 [data-testid="stSidebar"] {
     background: #161b22 !important;
     border-right: 1px solid #30363d !important;
@@ -36,7 +33,6 @@ html, body, [class*="css"] {
 [data-testid="stSidebar"] .stSelectbox label { display: none; }
 section[data-testid="stSidebar"] > div { padding-top: 0 !important; }
 
-/* Selectbox */
 [data-testid="stSelectbox"] > div > div {
     background: #21262d !important;
     border: 1px solid #30363d !important;
@@ -44,7 +40,6 @@ section[data-testid="stSidebar"] > div { padding-top: 0 !important; }
     border-radius: 8px !important;
 }
 
-/* Number inputs */
 [data-testid="stNumberInput"] input {
     background: #21262d !important;
     border: 1px solid #30363d !important;
@@ -52,7 +47,6 @@ section[data-testid="stSidebar"] > div { padding-top: 0 !important; }
     border-radius: 8px !important;
 }
 
-/* Buttons */
 .stButton > button {
     background: #21262d !important;
     border: 1px solid #30363d !important;
@@ -68,15 +62,12 @@ section[data-testid="stSidebar"] > div { padding-top: 0 !important; }
     border-color: #58a6ff !important;
 }
 
-/* Dataframe */
 [data-testid="stDataFrame"] {
     background: #161b22 !important;
 }
 
-/* Divider */
 hr { border-color: #30363d !important; }
 
-/* Page header bar */
 .page-header {
     border-bottom: 1px solid #30363d;
     padding: 1.5rem 0 1rem 0;
@@ -93,17 +84,19 @@ hr { border-color: #30363d !important; }
     margin: 0;
     font-size: 0.9rem;
 }
+/* FIX 1: Compact date box */
 .page-date {
     background: #21262d;
     border: 1px solid #30363d;
     border-radius: 8px;
-    padding: 0.5rem 1rem;
+    padding: 0.35rem 0.75rem;
     text-align: right;
     font-size: 0.8rem;
     color: #8b949e;
+    white-space: nowrap;
+    display: inline-block;
 }
 
-/* KPI Cards */
 .kpi-card {
     background: #161b22;
     border: 1px solid #30363d;
@@ -111,6 +104,11 @@ hr { border-color: #30363d !important; }
     padding: 1.25rem 1.5rem;
     position: relative;
     overflow: hidden;
+    height: 160px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 .kpi-card .kpi-label {
     font-size: 0.8rem;
@@ -137,7 +135,6 @@ hr { border-color: #30363d !important; }
     width: 100%;
 }
 
-/* Section cards */
 .section-card {
     background: #161b22;
     border: 1px solid #30363d;
@@ -145,7 +142,6 @@ hr { border-color: #30363d !important; }
     padding: 1.5rem;
 }
 
-/* Compact section card for patient info pills */
 .info-pill {
     background: #21262d;
     border: 1px solid #30363d;
@@ -166,7 +162,6 @@ hr { border-color: #30363d !important; }
     margin-top: 0.25rem;
 }
 
-/* Tables */
 .styled-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .styled-table th {
     background: #21262d;
@@ -187,7 +182,6 @@ hr { border-color: #30363d !important; }
 .styled-table tr:last-child td { border-bottom: none; }
 .styled-table tr:hover td { background: #21262d; }
 
-/* Info / alert boxes */
 .info-box {
     background: #0d1b2a;
     border: 1px solid #1f6feb;
@@ -200,7 +194,6 @@ hr { border-color: #30363d !important; }
     align-items: flex-start;
 }
 
-/* Factor bars */
 .factor-row {
     display: flex;
     align-items: center;
@@ -212,7 +205,6 @@ hr { border-color: #30363d !important; }
 .factor-bar-bg { flex: 1; background: #21262d; border-radius: 4px; height: 10px; }
 .factor-pct { width: 40px; text-align: right; color: #8b949e; font-size: 0.8rem; }
 
-/* Disclaimer box in sidebar */
 .disclaimer-box {
     background: #21262d;
     border: 1px solid #30363d;
@@ -221,7 +213,6 @@ hr { border-color: #30363d !important; }
     margin-top: 1rem;
 }
 
-/* Footer */
 .footer {
     margin-top: 3rem;
     padding-top: 1rem;
@@ -231,10 +222,14 @@ hr { border-color: #30363d !important; }
     font-size: 0.75rem;
     color: #6e7681;
 }
+
+/* Make all kpi-card siblings in a row the same height */
+div[data-testid="stHorizontalBlock"] > div[data-testid="column"] .kpi-card {
+    height: 160px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
 BASE_DIR          = os.path.dirname(os.path.abspath(__file__))
 METRICS_PATH      = os.path.join(BASE_DIR, '..', 'notebooks', 'metrics.csv')
 IMPORTANCE_PATH   = os.path.join(BASE_DIR, '..', 'notebooks', 'feature_importance.csv')
@@ -242,7 +237,6 @@ PREDICTIONS_PATH  = os.path.join(BASE_DIR, '..', 'notebooks', 'predictions.csv')
 PIPELINE_PATH     = os.path.join(BASE_DIR, '..', 'notebooks', 'pipeline.pkl')
 DATA_PATH         = os.path.join(BASE_DIR, '..', 'data', 'heart_failure_clinical_records_dataset.csv')
 
-# ── Constants ──────────────────────────────────────────────────────────────────
 RISK_THRESHOLDS = { "HIGH": 0.7, "MEDIUM": 0.4 }
 RISK_COLORS     = { "HIGH": "#f85149", "MEDIUM": "#e3b341", "LOW": "#3fb950" }
 RISK_LABELS     = { "HIGH": "High Risk", "MEDIUM": "Medium Risk", "LOW": "Low Risk" }
@@ -269,7 +263,6 @@ BOOLEAN_FEATURES = {'anaemia', 'diabetes', 'high_blood_pressure', 'smoking'}
 
 TODAY = date.today().strftime("%b %d, %Y")
 
-# ── Helper functions ───────────────────────────────────────────────────────────
 def get_risk_category(prob):
     if prob >= RISK_THRESHOLDS['HIGH']:
         return {"category": "HIGH", "label": "High Risk", "color": RISK_COLORS['HIGH']}
@@ -278,12 +271,17 @@ def get_risk_category(prob):
     else:
         return {"category": "LOW", "label": "Low Risk", "color": RISK_COLORS['LOW']}
 
-def kpi_card(label, value, color, sub=""):
+def kpi_card(label, value, color, sub="", icon=""):
     return f"""
     <div class="kpi-card">
-        <div class="kpi-label">{label}</div>
-        <div class="kpi-value" style="color:{color};">{value}</div>
-        <div class="kpi-sub">{sub}</div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+            <span style="font-size:1.8rem;line-height:1;flex-shrink:0;">{icon}</span>
+            <span class="kpi-label" style="margin:0;font-size:0.72rem;">{label}</span>
+        </div>
+        <div>
+            <div class="kpi-value" style="color:{color};font-size:1.9rem;">{value}</div>
+            <div class="kpi-sub">{sub}</div>
+        </div>
         <div class="kpi-bar" style="background:{color};opacity:0.4;"></div>
     </div>"""
 
@@ -296,9 +294,10 @@ def page_header(title, subtitle):
             <p>{subtitle}</p>
         </div>""", unsafe_allow_html=True)
     with col_b:
+        # FIX 1: compact single-line date box
         st.markdown(f"""
-        <div class="page-date" style="margin-top:1.5rem;">
-            📅 {TODAY}<br><span style="color:#6e7681;">Last Updated</span>
+        <div style="margin-top:1.5rem;text-align:right;">
+            <span class="page-date">📅 {TODAY}</span>
         </div>""", unsafe_allow_html=True)
 
 def get_risk_flags(patient_dict):
@@ -479,33 +478,34 @@ if "Dashboard" in page:
     low_count          = patient_count - elevated_count
     survived           = patient_count - int(observed_count)
 
-    # ── Row 1: dataset KPI cards ───────────────────────────────────────────
+    # ── Row 1: KPI cards ──────────────────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
-    c1.markdown(kpi_card("Total Patients", f"{patient_count:,}", "#58a6ff", "In Dataset"), unsafe_allow_html=True)
+    c1.markdown(kpi_card("Total Patients", f"{patient_count:,}", "#58a6ff", "In Dataset", "👥"), unsafe_allow_html=True)
     c2.markdown(kpi_card("Elevated Risk (Predicted)", f"{elevated_count}", "#f85149",
-        f"{elevated_count/patient_count*100:.1f}% of patients"), unsafe_allow_html=True)
-    c3.markdown(kpi_card("Historical Mortality Rate<br>(DEATH_EVENT = 1)",
-        f"{observed_mortality:.2f}%", "#e3b341", f"{int(observed_count)} of {patient_count} patients"), unsafe_allow_html=True)
-    c4.markdown(kpi_card("Model Accuracy", f"{accuracy_val:.2f}%", "#3fb950", "On Cross-Validation"), unsafe_allow_html=True)
+        f"{elevated_count/patient_count*100:.1f}% of patients", "⚠️"), unsafe_allow_html=True)
+    c3.markdown(kpi_card("Historical Mortality Rate (DEATH_EVENT = 1)",
+        f"{observed_mortality:.2f}%", "#e3b341", f"{int(observed_count)} of {patient_count} patients", "💛"), unsafe_allow_html=True)
+    c4.markdown(kpi_card("Model Accuracy", f"{accuracy_val:.2f}%", "#3fb950", "On Cross-Validation", "🎯"), unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ── Row 2: model performance metrics strip ─────────────────────────────
+    # ── Row 2: Model performance strip ────────────────────────────────────
+    # FIX 2 & 3: All 5 cards have icons; icon size increased to 2rem
     st.markdown('<span style="color:#e6edf3;font-size:1.05rem;font-weight:600;">Model Performance (Cross-Validation)</span>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     perf_defs = [
-        ("✅", "Accuracy",            f"{accuracy_val:.2f}%",  "#58a6ff", "Overall correctness"),
-        ("🎯", "Precision",           f"{precision_val:.2f}%", "#3fb950", "Correct positive predictions"),
-        ("🔁", "Recall (Sensitivity)",f"{recall_val:.2f}%",    "#e3b341", "Actual positives identified"),
-        ("F1", "F1-Score",            f"{f1_val:.2f}%",        "#bc8cff", "Precision × Recall balance"),
-        ("📈", "AUC-ROC",             f"{roc_val:.2f}",        "#39d0d8", "Area under ROC curve"),
+        ("✅", "Accuracy",             f"{accuracy_val:.2f}%",  "#58a6ff", "Overall correctness"),
+        ("🎯", "Precision",            f"{precision_val:.2f}%", "#3fb950", "Correct positive predictions"),
+        ("🔁", "Recall (Sensitivity)", f"{recall_val:.2f}%",    "#e3b341", "Actual positives identified"),
+        ("🏅", "F1-Score",             f"{f1_val:.2f}%",        "#bc8cff", "Precision × Recall balance"),
+        ("📈", "AUC-ROC",              f"{roc_val:.2f}",        "#39d0d8", "Area under ROC curve"),
     ]
     perf_cols = st.columns(5)
     for col, (icon, label, val, color, desc) in zip(perf_cols, perf_defs):
         col.markdown(f"""
         <div class="section-card" style="text-align:center;padding:1.1rem 0.5rem;">
-            <div style="font-size:1.3rem;margin-bottom:0.35rem;">{icon}</div>
+            <div style="font-size:2rem;margin-bottom:0.35rem;">{icon}</div>
             <div style="font-size:0.7rem;font-weight:600;color:#8b949e;text-transform:uppercase;
                  letter-spacing:0.04em;margin-bottom:0.25rem;">{label}</div>
             <div style="font-size:1.6rem;font-weight:700;color:{color};line-height:1.1;">{val}</div>
@@ -585,55 +585,53 @@ if "Dashboard" in page:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ── Row 4: analytical Key Insights ────────────────────────────────────
+    # ── Row 4: Key Insights ────────────────────────────────────────────────
     st.markdown('<span style="color:#e6edf3;font-size:1.05rem;font-weight:600;">Key Insights</span>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     top2_features = importance_df.nlargest(2, 'Importance')['Feature'].tolist()
     top2_labels   = [FEATURE_LABELS.get(f, f).split(' (')[0] for f in top2_features]
-    flag_gap      = elevated_count/patient_count*100 - observed_mortality
 
     ki1, ki2, ki3, ki4, ki5 = st.columns(5)
 
-    ki1.markdown(f"""<div class="section-card" style="text-align:center;">
-        <div style="font-size:1.4rem;margin-bottom:0.4rem;">❤️</div>
-        <div style="font-size:1.3rem;font-weight:700;color:#e3b341;">{observed_mortality:.2f}%</div>
-        <div style="font-size:0.78rem;color:#8b949e;margin-top:0.3rem;line-height:1.5;">
-            Historical mortality rate shows the outcome prevalence in the dataset.
-        </div>
+    # All 5 cards: identical fixed height + flex layout so they never differ
+    _KI = "background:#161b22;border:1px solid #30363d;border-radius:12px;padding:1.25rem 1rem;" \
+          "text-align:center;height:190px;display:flex;flex-direction:column;" \
+          "align-items:center;justify-content:center;gap:0.3rem;box-sizing:border-box;"
+
+    ki1.markdown(f"""
+    <div style="{_KI}">
+        <div style="font-size:2rem;line-height:1;flex-shrink:0;">❤️</div>
+        <div style="font-size:1.3rem;font-weight:700;color:#e3b341;line-height:1.2;">{observed_mortality:.2f}%</div>
+        <div style="font-size:0.78rem;color:#8b949e;line-height:1.45;">Historical mortality rate shows the outcome prevalence in the dataset.</div>
     </div>""", unsafe_allow_html=True)
 
-    ki2.markdown(f"""<div class="section-card" style="text-align:center;">
-        <div style="font-size:1.4rem;margin-bottom:0.4rem;">📈</div>
-        <div style="font-size:1.3rem;font-weight:700;color:#e3b341;">{recall_val:.2f}%</div>
-        <div style="font-size:0.78rem;color:#8b949e;margin-top:0.3rem;line-height:1.5;">
-            Recall indicates the model identifies a majority of high-risk patients.
-        </div>
+    ki2.markdown(f"""
+    <div style="{_KI}">
+        <div style="font-size:2rem;line-height:1;flex-shrink:0;">📈</div>
+        <div style="font-size:1.3rem;font-weight:700;color:#e3b341;line-height:1.2;">{recall_val:.2f}%</div>
+        <div style="font-size:0.78rem;color:#8b949e;line-height:1.45;">Recall indicates the model identifies a majority of high-risk patients.</div>
     </div>""", unsafe_allow_html=True)
 
-    ki3.markdown(f"""<div class="section-card" style="text-align:center;">
-        <div style="font-size:1.4rem;margin-bottom:0.4rem;">🎯</div>
-        <div style="font-size:1.3rem;font-weight:700;color:#39d0d8;">{roc_val:.2f}</div>
-        <div style="font-size:0.78rem;color:#8b949e;margin-top:0.3rem;line-height:1.5;">
-            AUC-ROC of {roc_val:.2f} indicates moderate discriminatory capability of the model.
-        </div>
+    ki3.markdown(f"""
+    <div style="{_KI}">
+        <div style="font-size:2rem;line-height:1;flex-shrink:0;">🎯</div>
+        <div style="font-size:1.3rem;font-weight:700;color:#39d0d8;line-height:1.2;">{roc_val:.2f}</div>
+        <div style="font-size:0.78rem;color:#8b949e;line-height:1.45;">AUC-ROC of {roc_val:.2f} indicates moderate discriminatory capability of the model.</div>
     </div>""", unsafe_allow_html=True)
 
-    ki4.markdown(f"""<div class="section-card" style="text-align:center;">
-        <div style="font-size:1.4rem;margin-bottom:0.4rem;">🔬</div>
-        <div style="font-size:0.82rem;font-weight:600;color:#bc8cff;margin-bottom:0.3rem;">Top risk drivers</div>
-        <div style="font-size:0.78rem;color:#8b949e;line-height:1.5;">
-            {top2_labels[0]} and {top2_labels[1]} are the top contributors to elevated risk predictions.
-        </div>
+    ki4.markdown(f"""
+    <div style="{_KI}">
+        <div style="font-size:2rem;line-height:1;flex-shrink:0;">🔬</div>
+        <div style="font-size:0.85rem;font-weight:600;color:#bc8cff;">Top risk drivers</div>
+        <div style="font-size:0.78rem;color:#8b949e;line-height:1.45;">{top2_labels[0]} and {top2_labels[1]} are the top contributors to elevated risk predictions.</div>
     </div>""", unsafe_allow_html=True)
 
-    ki5.markdown(f"""<div class="section-card" style="text-align:center;">
-        <div style="font-size:1.4rem;margin-bottom:0.4rem;">⚖️</div>
-        <div style="font-size:0.82rem;font-weight:600;color:#e3b341;margin-bottom:0.3rem;">Risk vs. Mortality gap</div>
-        <div style="font-size:0.78rem;color:#8b949e;line-height:1.5;">
-            Predicted elevated-risk rate ({elevated_count/patient_count*100:.1f}%) is higher than the observed
-            mortality rate, reflecting conservative risk flagging.
-        </div>
+    ki5.markdown(f"""
+    <div style="{_KI}">
+        <div style="font-size:2rem;line-height:1;flex-shrink:0;">⚖️</div>
+        <div style="font-size:0.85rem;font-weight:600;color:#e3b341;">Risk vs. Mortality gap</div>
+        <div style="font-size:0.78rem;color:#8b949e;line-height:1.45;">Predicted elevated-risk rate ({elevated_count/patient_count*100:.1f}%) is higher than the observed mortality rate, reflecting conservative risk flagging.</div>
     </div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -969,7 +967,7 @@ elif "Model Performance" in page:
         (accuracy,  "✅", "Accuracy",            "#58a6ff", "Overall correctness"),
         (precision, "🎯", "Precision",            "#3fb950", "Correct positive predictions"),
         (recall,    "🔁", "Recall (Sensitivity)", "#e3b341", "Actual positives identified"),
-        (f1,        "F1", "F1-Score",             "#bc8cff", "Precision × Recall balance"),
+        (f1,        "🏅", "F1-Score",             "#bc8cff", "Precision × Recall balance"),
         (roc_auc,   "📈", "AUC-ROC",              "#39d0d8", "Area under ROC curve"),
     ]
     for col, (row, icon, label, color, desc) in zip(mc, defs):
@@ -1165,7 +1163,6 @@ elif "Simulated" in page:
     rc = risk_category['color']
 
     with col_risk:
-        # Personalized contribution: importance × how abnormal the patient's value is
         NORMAL_RANGES = {
             'ejection_fraction':        (55,     70,     'low'),
             'serum_creatinine':         (0.7,    1.2,    'high'),
@@ -1246,7 +1243,6 @@ elif "Simulated" in page:
             {factors_section}
         </div>""", unsafe_allow_html=True)
 
-        # ── Prediction Explanation ────────────────────────────────────────────
         explanation_lines = []
 
         ef_val = patient_sim['ejection_fraction']
@@ -1325,7 +1321,6 @@ elif "Simulated" in page:
                 "The model's prediction is based on the combined profile of all indicators."
             )
 
-        outcome_word = "higher" if prob >= RISK_THRESHOLDS['MEDIUM'] else "lower"
         bullets_exp  = "".join(
             f"<li style='margin-bottom:0.5rem;font-size:0.83rem;color:#c9d1d9;line-height:1.5;'>{line}</li>"
             for line in explanation_lines
@@ -1345,7 +1340,7 @@ elif "Simulated" in page:
                 {bullets_exp}
             </ul>
             <p style="font-size:0.78rem;color:#6e7681;margin:0.75rem 0 0 0;font-style:italic;">
-                These factors have been associated with {outcome_word} rates of adverse outcomes
+                These factors have been associated with {"higher" if prob >= RISK_THRESHOLDS["MEDIUM"] else "lower"} rates of adverse outcomes
                 in similar historical patients.
             </p>
         </div>""", unsafe_allow_html=True)
