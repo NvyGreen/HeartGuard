@@ -773,7 +773,7 @@ if "Dashboard" in page:
 # ── Page: Patient Review ───────────────────────────────────────────────────────
 elif "Patient Review" in page:
     page_header("Patient Review",
-        "Select a patient from the dataset to view risk assessment, key indicators, and recommendation.")
+        "Review historical patient cases to understand risk predictions, key indicators, and outcomes.")
 
     df_full = pd.read_csv(DATA_PATH)
     df_full.insert(0, 'patient_id', [f'P{i:06d}' for i in range(len(df_full))])
@@ -781,7 +781,15 @@ elif "Patient Review" in page:
     with open(PIPELINE_PATH, 'rb') as f:
         pipeline = pickle.load(f)
 
-    sel_col, info1, info2, info3, info4 = st.columns([2, 1.2, 1.2, 1.2, 1])
+    try:
+        importance_df  = pd.read_csv(IMPORTANCE_PATH)
+        importance_map = dict(zip(importance_df['Feature'], importance_df['Importance']))
+    except FileNotFoundError:
+        importance_map = {}
+
+    # ── Patient selector row ──────────────────────────────────────────────
+    sel_col, info1, info2, info3, info4 = st.columns([2, 1.2, 1.4, 1.6, 1.6])
+
     with sel_col:
         st.markdown('<span style="color:#e6edf3;font-weight:600;">Select Patient</span>', unsafe_allow_html=True)
         selected_id = st.selectbox("Patient ID", df_full['patient_id'].tolist(),
@@ -790,12 +798,15 @@ elif "Patient Review" in page:
 
     patient_row  = df_full[df_full['patient_id'] == selected_id].iloc[0]
     patient_dict = patient_row[FEATURES].to_dict()
-    actual        = int(patient_row['DEATH_EVENT'])
-    sex_label     = "Male" if patient_dict['sex'] == 1 else "Female"
-    idx           = int(selected_id.replace('P', ''))
+    actual       = int(patient_row['DEATH_EVENT'])
+    sex_label    = "Male" if patient_dict['sex'] == 1 else "Female"
+
+    prob          = pipeline.predict_proba(pd.DataFrame([patient_dict])[FEATURES])[0][1]
+    risk_category = get_risk_category(prob)
+    rc            = risk_category['color']
 
     outcome_color = "#f85149" if actual == 1 else "#3fb950"
-    outcome_text  = "1 (Died)" if actual == 1 else "0 (Survived)"
+    outcome_text  = "Deceased During Follow-Up" if actual == 1 else "Survived Follow-Up"
 
     with info1:
         st.markdown(f"""<div class="info-pill">
@@ -809,25 +820,60 @@ elif "Patient Review" in page:
         </div>""", unsafe_allow_html=True)
     with info3:
         st.markdown(f"""<div class="info-pill">
-            <div class="pill-label">❤️ DEATH_EVENT (Actual)</div>
-            <div class="pill-value" style="color:{outcome_color};">{outcome_text}</div>
+            <div class="pill-label">❤️ Historical Outcome</div>
+            <div class="pill-value" style="color:{outcome_color};font-size:0.9rem;">{outcome_text}</div>
         </div>""", unsafe_allow_html=True)
     with info4:
         st.markdown(f"""<div class="info-pill">
-            <div class="pill-label"># Dataset Index</div>
-            <div class="pill-value">{idx}</div>
+            <div class="pill-label">🛡️ Predicted Risk Level</div>
+            <div class="pill-value" style="color:{rc};">{risk_category['label']}</div>
+            <div style="font-size:0.72rem;color:#6e7681;">Probability: {prob:.2f} ({prob*100:.0f}%)</div>
         </div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    prob          = pipeline.predict_proba(pd.DataFrame([patient_dict])[FEATURES])[0][1]
-    risk_category = get_risk_category(prob)
-    ranked, importance_map = get_risk_flags(patient_dict)
+    # ── Personalized contributing factors ─────────────────────────────────
+    NORMAL_RANGES = {
+        'ejection_fraction':        (55,     70,     'low'),
+        'serum_creatinine':         (0.7,    1.2,    'high'),
+        'serum_sodium':             (135,    145,    'low'),
+        'age':                      (0,      60,     'high'),
+        'creatinine_phosphokinase': (40,     308,    'high'),
+        'platelets':                (150000, 400000, None),
+        'diabetes':                 (0,      0,      'high'),
+        'high_blood_pressure':      (0,      0,      'high'),
+        'anaemia':                  (0,      0,      'high'),
+        'smoking':                  (0,      0,      'high'),
+        'sex':                      (0,      1,      None),
+    }
 
+    def abnormality_score(feature, value):
+        if feature not in NORMAL_RANGES:
+            return 0
+        lo, hi, bad_dir = NORMAL_RANGES[feature]
+        if bad_dir == 'high':
+            return max(0, (value - hi) / (hi - lo + 1e-9))
+        elif bad_dir == 'low':
+            return max(0, (lo - value) / (hi - lo + 1e-9))
+        else:
+            mid = (lo + hi) / 2
+            return abs(value - mid) / ((hi - lo) / 2 + 1e-9)
+
+    personalized = {}
+    for feature in FEATURES:
+        imp    = importance_map.get(feature, 0)
+        val    = patient_dict[feature]
+        abnorm = abnormality_score(feature, val)
+        personalized[feature] = imp * (1 + abnorm)
+
+    total        = sum(personalized.values()) or 1
+    top_features = sorted(personalized.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    # ── Main two-column layout ────────────────────────────────────────────
     left_col, right_col = st.columns([1, 1.1])
 
     with left_col:
-        st.markdown('<span style="color:#e6edf3;font-weight:600;">Patient Details (Clinical Indicators)</span>', unsafe_allow_html=True)
+        # Patient details table
         rows_html = ""
         for feature, label in FEATURE_LABELS.items():
             val = patient_dict[feature]
@@ -842,105 +888,187 @@ elif "Patient Review" in page:
             rows_html += f"<tr><td>{label}</td><td><b style='color:#e6edf3;'>{display}</b></td></tr>"
 
         st.markdown(f"""
-        <table class="styled-table">
-            <thead><tr><th>Indicator</th><th>Value</th></tr></thead>
-            <tbody>{rows_html}</tbody>
-        </table>
-        <div class="info-box" style="margin-top:0.75rem;">ℹ️ These values are from the historical dataset.</div>
-        """, unsafe_allow_html=True)
+        <div class="section-card">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+                <span style="font-size:1rem;">📋</span>
+                <span style="font-weight:600;color:#e6edf3;">Patient Details (Clinical Indicators)</span>
+            </div>
+            <table class="styled-table">
+                <thead><tr><th>Indicator</th><th>Value</th></tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+            <div class="info-box" style="margin-top:0.75rem;">ℹ️ These values are from the historical dataset.</div>
+        </div>""", unsafe_allow_html=True)
 
-        if ranked:
-            st.markdown('<br><span style="color:#e6edf3;font-weight:600;">Top Contributing Risk Factors</span>', unsafe_allow_html=True)
-            st.markdown(factor_bars(ranked, importance_map), unsafe_allow_html=True)
-            st.markdown('<div style="font-size:0.75rem;color:#6e7681;margin-top:0.25rem;">Percentages indicate relative contribution to the prediction.</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Contributing factors
+        bar_colors = ["#f85149", "#e3b341", "#d29922", "#3fb950", "#58a6ff"]
+        factors_html = ""
+        for i, (feature, score) in enumerate(top_features):
+            pct   = round(score / total * 100)
+            color = bar_colors[min(i, len(bar_colors)-1)]
+            label = FEATURE_LABELS.get(feature, feature).split(' (')[0]
+            factors_html += (
+                '<div class="factor-row">'
+                f'<div class="factor-label">{label}</div>'
+                '<div class="factor-bar-bg">'
+                f'<div style="width:{pct}%;background:{color};height:10px;border-radius:4px;"></div>'
+                '</div>'
+                f'<div class="factor-pct">{pct}%</div>'
+                '</div>'
+            )
+
+        st.markdown(f"""
+        <div style="margin-top:1rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+                <span style="font-size:1rem;">🔬</span>
+                <span style="font-weight:600;color:#3fb950;">Top Contributing Risk Factors</span>
+            </div>
+            {factors_html}
+            <div style="font-size:0.75rem;color:#6e7681;margin-top:0.25rem;font-style:italic;">
+                Percentages indicate relative contribution to the predicted risk.
+            </div>
+        </div>""", unsafe_allow_html=True)
 
     with right_col:
-        st.markdown('<span style="color:#e6edf3;font-weight:600;">Risk Assessment</span>', unsafe_allow_html=True)
-
-        ra1, ra2, ra3 = st.columns(3)
-        rc = risk_category['color']
-        with ra1:
-            st.markdown(f"""
-            <div style="text-align:center;padding:1rem 0;">
-                <div style="font-size:0.75rem;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.5rem;">Predicted Risk Score</div>
-                <div style="font-size:2.5rem;font-weight:700;color:{rc};line-height:1;">{prob:.2f}</div>
-                <div style="font-size:1rem;color:{rc};font-weight:600;">({prob*100:.0f}%)</div>
-                <div style="font-size:0.75rem;color:#6e7681;margin-top:0.5rem;">Probability of adverse outcome<br>(DEATH_EVENT = 1)</div>
-            </div>""", unsafe_allow_html=True)
-        with ra2:
-            st.markdown(f"""
-            <div style="text-align:center;padding:1rem 0;">
-                <div style="font-size:0.75rem;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.5rem;">Risk Category</div>
-                <div style="background:{rc}22;border:1px solid {rc}66;border-radius:8px;padding:0.6rem 0.5rem;margin:0.5rem 0;">
-                    <span style="color:{rc};font-weight:700;font-size:0.9rem;">⚠️ {risk_category['label'].upper()}</span>
-                </div>
-                <div style="font-size:0.72rem;color:#6e7681;">Elevated risk of adverse outcome.</div>
-            </div>""", unsafe_allow_html=True)
-        with ra3:
-            pred_label = int(prob >= RISK_THRESHOLDS['MEDIUM'])
-            pred_color = "#f85149" if pred_label == 1 else "#3fb950"
-            pred_text  = "High Risk" if pred_label == 1 else "Low Risk"
-            st.markdown(f"""
-            <div style="text-align:center;padding:1rem 0;">
-                <div style="font-size:0.75rem;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.5rem;">Prediction</div>
-                <div style="font-size:1.75rem;font-weight:700;color:{pred_color};line-height:1;">{pred_label}</div>
-                <div style="color:{pred_color};font-weight:600;font-size:0.85rem;">({pred_text})</div>
-                <div style="font-size:0.72rem;color:#6e7681;margin-top:0.5rem;">Model predicts {'high' if pred_label else 'low'} likelihood of adverse outcome.</div>
-            </div>""", unsafe_allow_html=True)
-
-        st.divider()
-        st.markdown('<span style="color:#e6edf3;font-weight:600;">AI-Generated Recommendation</span>', unsafe_allow_html=True)
-        cat = risk_category['category']
-
-        if cat == "HIGH":
-            rec_text = f"This patient is at <b style='color:{rc};'>HIGH RISK</b> based on clinical indicators and historical outcome patterns."
-            bullets  = ["Consider closer monitoring and timely follow-up.",
-                        "Review and optimize heart failure management plan.",
-                        "Evaluate for potential need for specialist consultation.",
-                        "Encourage lifestyle modification and adherence to prescribed therapy."]
-        elif cat == "MEDIUM":
-            rec_text = f"This patient is at <b style='color:{rc};'>MODERATE RISK</b> based on clinical indicators."
-            bullets  = ["Schedule follow-up within 7 days.",
-                        "Monitor serum creatinine and ejection fraction closely.",
-                        "Consider cardiology referral if symptoms worsen."]
-        else:
-            rec_text = f"This patient is at <b style='color:{rc};'>LOW RISK</b> based on current clinical indicators."
-            bullets  = ["Continue routine monitoring.",
-                        "Reassess if symptoms worsen or new risk factors emerge."]
-
-        bullets_html = "".join(f"<li style='margin-bottom:0.3rem;'>{b}</li>" for b in bullets)
+        # Risk Assessment panel
         st.markdown(f"""
-        <div style="background:{rc}18;border:1px solid {rc}44;border-radius:8px;padding:1rem 1.25rem;margin-top:0.5rem;">
-            <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-                <span style="font-size:1.25rem;">📋</span>
+        <div class="section-card">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+                <span style="font-size:1rem;">🛡️</span>
+                <span style="font-weight:600;color:#e6edf3;">Risk Assessment</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;text-align:center;margin-bottom:1rem;">
                 <div>
-                    <p style="margin:0 0 0.5rem 0;font-size:0.88rem;color:#c9d1d9;">{rec_text}</p>
-                    <ul style="margin:0;padding-left:1.25rem;font-size:0.85rem;color:#c9d1d9;">{bullets_html}</ul>
-                    <p style="margin:0.75rem 0 0 0;font-size:0.75rem;color:#6e7681;font-style:italic;">
-                        Recommendations are for educational/demo purposes only.
-                    </p>
+                    <div style="font-size:0.7rem;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.4rem;">Predicted Risk Score</div>
+                    <div style="font-size:2.2rem;font-weight:700;color:{rc};line-height:1;">{prob:.2f}</div>
+                    <div style="font-size:0.9rem;color:{rc};font-weight:600;">({prob*100:.0f}%)</div>
+                    <div style="font-size:0.72rem;color:#6e7681;margin-top:0.4rem;">Probability of adverse outcome<br>(DEATH_EVENT = 1)</div>
+                </div>
+                <div>
+                    <div style="font-size:0.7rem;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.4rem;">Risk Category</div>
+                    <div style="background:{rc}22;border:1px solid {rc}66;border-radius:8px;padding:0.5rem;margin:0.4rem 0;">
+                        <span style="color:{rc};font-weight:700;font-size:0.88rem;">⚠️ {risk_category['label'].upper()}</span>
+                    </div>
+                    <div style="font-size:0.72rem;color:#6e7681;">Elevated risk of adverse outcome.</div>
+                </div>
+                <div>
+                    <div style="font-size:0.7rem;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.4rem;">Interpretation</div>
+                    <div style="font-size:0.8rem;color:#c9d1d9;line-height:1.5;margin-top:0.4rem;">
+                        The patient's clinical indicators resemble patterns associated with
+                        {"elevated" if prob >= RISK_THRESHOLDS["MEDIUM"] else "lower"} adverse outcome
+                        risk in the historical dataset.
+                    </div>
                 </div>
             </div>
         </div>""", unsafe_allow_html=True)
 
-        st.divider()
-        st.markdown('<span style="color:#e6edf3;font-weight:600;">Patient Summary</span>', unsafe_allow_html=True)
-        ef    = patient_dict['ejection_fraction']
-        sc    = patient_dict['serum_creatinine']
-        sn    = patient_dict['serum_sodium']
-        diab  = "diabetes" if patient_dict['diabetes'] == 1 else ""
-        hbp   = "hypertension" if patient_dict['high_blood_pressure'] == 1 else ""
-        comor = " and ".join(filter(None, [diab, hbp]))
-        comor_sent = f" History of {comor} increases risk." if comor else ""
+        # Historical Case Interpretation
+        ef_val  = patient_dict['ejection_fraction']
+        sc_val  = patient_dict['serum_creatinine']
+        sn_val  = patient_dict['serum_sodium']
+        age_val = int(patient_dict['age'])
+
+        key_drivers = []
+        if ef_val < 40:
+            key_drivers.append(f"reduced ejection fraction ({ef_val}%)")
+        if sc_val > 1.2:
+            key_drivers.append(f"elevated serum creatinine ({sc_val} mg/dL)")
+        if age_val > 60:
+            key_drivers.append(f"advanced age ({age_val} years)")
+        if sn_val < 135:
+            key_drivers.append(f"low serum sodium ({sn_val} mEq/L)")
+        key_driver_str = ", ".join(key_drivers[:3]) if key_drivers else "the combined clinical profile"
+
+        comorbidities = []
+        if patient_dict['high_blood_pressure'] == 1:
+            comorbidities.append("hypertension")
+        if patient_dict['diabetes'] == 1:
+            comorbidities.append("diabetes")
+        if patient_dict['anaemia'] == 1:
+            comorbidities.append("anaemia")
+        if patient_dict['smoking'] == 1:
+            comorbidities.append("smoking history")
+        comorbidity_str = " and ".join(comorbidities) if comorbidities else None
+
+        outcome_context = (
+            "This patient experienced an adverse outcome during the follow-up period."
+            if actual == 1 else
+            "This patient survived the follow-up period without an adverse outcome."
+        )
 
         st.markdown(f"""
-        <div style="background:#21262d;border-radius:8px;padding:1rem;font-size:0.85rem;color:#c9d1d9;line-height:1.6;margin-top:0.5rem;">
-            {int(patient_dict['age'])}-year-old {sex_label.lower()} with ejection fraction of {ef}%,
-            serum creatinine {sc} mg/dL, and serum sodium {sn} mEq/L.{comor_sent}
-            Model predicts {'high' if prob >= RISK_THRESHOLDS['MEDIUM'] else 'low'} risk of adverse outcome.
+        <div class="section-card" style="margin-top:1rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+                <span style="font-size:1rem;">🔍</span>
+                <span style="font-weight:600;color:#e6edf3;">Historical Case Interpretation</span>
+            </div>
+            <p style="font-size:0.85rem;color:#8b949e;margin:0 0 0.75rem 0;">
+                Based on the provided clinical indicators, the model identified patterns commonly
+                associated with {"high-risk" if prob >= RISK_THRESHOLDS["HIGH"] else "moderate-risk" if prob >= RISK_THRESHOLDS["MEDIUM"] else "low-risk"} outcomes in similar historical cases.
+            </p>
+            <div style="display:flex;flex-direction:column;gap:0.6rem;">
+                <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                    <div style="background:#f85149;border-radius:50%;width:22px;height:22px;display:flex;
+                         align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+                        <span style="font-size:0.65rem;font-weight:700;color:#fff;">K</span>
+                    </div>
+                    <div style="font-size:0.83rem;color:#c9d1d9;line-height:1.5;">
+                        <b style="color:#f85149;">Key Driver:</b> {key_driver_str.capitalize()} contributed most to the {"elevated" if prob >= RISK_THRESHOLDS["MEDIUM"] else "predicted"} risk.
+                    </div>
+                </div>
+                {f'''<div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                    <div style="background:#e3b341;border-radius:50%;width:22px;height:22px;display:flex;
+                         align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+                        <span style="font-size:0.65rem;font-weight:700;color:#fff;">C</span>
+                    </div>
+                    <div style="font-size:0.83rem;color:#c9d1d9;line-height:1.5;">
+                        <b style="color:#e3b341;">Comorbidity Impact:</b> History of {comorbidity_str} further {"increases" if prob >= RISK_THRESHOLDS["MEDIUM"] else "contributes to the"} overall risk.
+                    </div>
+                </div>''' if comorbidity_str else ''}
+                <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                    <div style="background:#58a6ff;border-radius:50%;width:22px;height:22px;display:flex;
+                         align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+                        <span style="font-size:0.65rem;font-weight:700;color:#fff;">O</span>
+                    </div>
+                    <div style="font-size:0.83rem;color:#c9d1d9;line-height:1.5;">
+                        <b style="color:#58a6ff;">Outcome Context:</b> {outcome_context}
+                    </div>
+                </div>
+            </div>
+            <p style="font-size:0.75rem;color:#6e7681;margin:0.75rem 0 0 0;font-style:italic;">
+                This section provides retrospective interpretation and is <u>not</u> a recommendation for clinical action.
+            </p>
         </div>""", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Patient Summary (retrospective)
+        diab = "diabetes" if patient_dict['diabetes'] == 1 else ""
+        hbp  = "hypertension" if patient_dict['high_blood_pressure'] == 1 else ""
+        comor = " and ".join(filter(None, [diab, hbp]))
+        comor_sent = f" History of {comor} further increased overall risk." if comor else ""
+
+        outcome_sent = (
+            "The model predicted high risk of adverse outcome, which was consistent with the observed historical outcome."
+            if actual == 1 and prob >= RISK_THRESHOLDS['MEDIUM'] else
+            "The model predicted lower risk, and the patient survived the follow-up period."
+            if actual == 0 and prob < RISK_THRESHOLDS['MEDIUM'] else
+            f"The model predicted {'high' if prob >= RISK_THRESHOLDS['MEDIUM'] else 'low'} risk; the observed outcome was {'adverse' if actual == 1 else 'survival'}."
+        )
+
+        st.markdown(f"""
+        <div class="section-card" style="margin-top:1rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+                <span style="font-size:1rem;">📄</span>
+                <span style="font-weight:600;color:#e6edf3;">Patient Summary</span>
+            </div>
+            <div style="font-size:0.85rem;color:#c9d1d9;line-height:1.7;">
+                This {age_val}-year-old {sex_label.lower()} had a reduced ejection fraction of {ef_val}%,
+                serum creatinine of {sc_val} mg/dL, and serum sodium of {sn_val} mEq/L.{comor_sent}
+                {outcome_sent}
+            </div>
+            <div class="info-box" style="margin-top:0.75rem;">
+                ℹ️ This page is for educational and research purposes only and does not provide clinical advice.
+            </div>
+        </div>""", unsafe_allow_html=True)
 
 
 # ── Page: Model Performance ────────────────────────────────────────────────────
