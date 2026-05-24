@@ -3,9 +3,11 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 import plotly.express as px
+import plotly.graph_objects as go
+import pickle
 
 st.set_page_config(
-    page_title="HeartGuard",
+    page_title="Heart Failure Risk Stratification",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -31,7 +33,6 @@ html, body, [class*="css"] {
     border-right: 1px solid #30363d !important;
 }
 [data-testid="stSidebar"] * { color: #c9d1d9 !important; }
-[data-testid="stSidebar"] .logo-guard { color: #f85149 !important; }
 [data-testid="stSidebar"] .stSelectbox label { display: none; }
 section[data-testid="stSidebar"] > div { padding-top: 0 !important; }
 
@@ -345,18 +346,17 @@ def factor_bars(ranked, importance_map):
         pct   = round(imp / total * 100)
         color = colors[min(i, len(colors)-1)]
         label = FEATURE_LABELS.get(feature, feature).split(' (')[0]
-        html += (
-            '<div class="factor-row">'
-            f'<div class="factor-label">{label}</div>'
-            '<div class="factor-bar-bg">'
-            f'<div style="width:{pct}%;background:{color};height:10px;border-radius:4px;"></div>'
-            '</div>'
-            f'<div class="factor-pct">{pct}%</div>'
-            '</div>'
-        )
+        html += f"""
+        <div class="factor-row">
+            <div class="factor-label">{label}</div>
+            <div class="factor-bar-bg">
+                <div style="width:{pct}%;background:{color};height:10px;border-radius:4px;"></div>
+            </div>
+            <div class="factor-pct">{pct}%</div>
+        </div>"""
     return html
 
-    # ── Sidebar ────────────────────────────────────────────────────────────────────
+# ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
     <div style="padding: 1.25rem 1rem 1rem 1rem; border-bottom: 1px solid #30363d; margin-bottom: 1rem;">
@@ -386,7 +386,6 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # Add nav button CSS
     st.markdown("""
     <style>
     div[data-testid="stSidebar"] .stButton > button {
@@ -461,25 +460,60 @@ if "Dashboard" in page:
 
     predictions_df = pd.read_csv(PREDICTIONS_PATH)
     metrics_df_raw = pd.read_csv(METRICS_PATH)
-    accuracy_row   = metrics_df_raw[metrics_df_raw['Metric'] == 'Accuracy']
-    accuracy_val   = accuracy_row['Mean'].values[0] * 100 if len(accuracy_row) else 0
+    importance_df  = pd.read_csv(IMPORTANCE_PATH)
+
+    def _m(name):
+        row = metrics_df_raw[metrics_df_raw['Metric'] == name]
+        return row['Mean'].values[0] if len(row) else 0
+
+    accuracy_val  = _m('Accuracy')  * 100
+    precision_val = _m('Precision') * 100
+    recall_val    = _m('Recall')    * 100
+    f1_val        = _m('F1 Score')  * 100
+    roc_val       = _m('ROC-AUC')
 
     patient_count      = len(predictions_df)
     elevated_count     = (predictions_df['probability'] >= RISK_THRESHOLDS['MEDIUM']).sum()
     observed_mortality = predictions_df['DEATH_EVENT'].mean() * 100
     observed_count     = predictions_df['DEATH_EVENT'].sum()
+    low_count          = patient_count - elevated_count
+    survived           = patient_count - int(observed_count)
 
+    # ── Row 1: dataset KPI cards ───────────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
     c1.markdown(kpi_card("Total Patients", f"{patient_count:,}", "#58a6ff", "In Dataset"), unsafe_allow_html=True)
     c2.markdown(kpi_card("Elevated Risk (Predicted)", f"{elevated_count}", "#f85149",
-        f"{elevated_count/patient_count*100:.2f}% of patients"), unsafe_allow_html=True)
+        f"{elevated_count/patient_count*100:.1f}% of patients"), unsafe_allow_html=True)
     c3.markdown(kpi_card("Historical Mortality Rate<br>(DEATH_EVENT = 1)",
         f"{observed_mortality:.2f}%", "#e3b341", f"{int(observed_count)} of {patient_count} patients"), unsafe_allow_html=True)
     c4.markdown(kpi_card("Model Accuracy", f"{accuracy_val:.2f}%", "#3fb950", "On Cross-Validation"), unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    import plotly.graph_objects as go
+    # ── Row 2: model performance metrics strip ─────────────────────────────
+    st.markdown('<span style="color:#e6edf3;font-size:1.05rem;font-weight:600;">Model Performance (Cross-Validation)</span>', unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    perf_defs = [
+        ("✅", "Accuracy",            f"{accuracy_val:.2f}%",  "#58a6ff", "Overall correctness"),
+        ("🎯", "Precision",           f"{precision_val:.2f}%", "#3fb950", "Correct positive predictions"),
+        ("🔁", "Recall (Sensitivity)",f"{recall_val:.2f}%",    "#e3b341", "Actual positives identified"),
+        ("F1", "F1-Score",            f"{f1_val:.2f}%",        "#bc8cff", "Precision × Recall balance"),
+        ("📈", "AUC-ROC",             f"{roc_val:.2f}",        "#39d0d8", "Area under ROC curve"),
+    ]
+    perf_cols = st.columns(5)
+    for col, (icon, label, val, color, desc) in zip(perf_cols, perf_defs):
+        col.markdown(f"""
+        <div class="section-card" style="text-align:center;padding:1.1rem 0.5rem;">
+            <div style="font-size:1.3rem;margin-bottom:0.35rem;">{icon}</div>
+            <div style="font-size:0.7rem;font-weight:600;color:#8b949e;text-transform:uppercase;
+                 letter-spacing:0.04em;margin-bottom:0.25rem;">{label}</div>
+            <div style="font-size:1.6rem;font-weight:700;color:{color};line-height:1.1;">{val}</div>
+            <div style="font-size:0.72rem;color:#6e7681;margin-top:0.3rem;">{desc}</div>
+            <div style="height:2px;background:{color};border-radius:2px;margin-top:0.6rem;opacity:0.45;"></div>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
 
     PLOTLY_LAYOUT = dict(
         paper_bgcolor="#161b22",
@@ -490,79 +524,126 @@ if "Dashboard" in page:
         showlegend=True,
     )
 
-    col_left, col_right = st.columns(2)
-    low_count = patient_count - elevated_count
-    survived  = patient_count - int(observed_count)
+    # ── Row 3: two pie charts + feature importance bar ─────────────────────
+    pie_l, pie_r, feat_col = st.columns([1, 1, 1.1])
 
-    with col_left:
+    with pie_l:
         st.markdown('<span style="color:#e6edf3;font-weight:600;">Risk Distribution (Predicted)</span>', unsafe_allow_html=True)
         fig1 = go.Figure(go.Pie(
-            labels=["Elevated Risk", "Low Risk"],
+            labels=[f"Elevated Risk ({elevated_count})", f"Low Risk ({low_count})"],
             values=[elevated_count, low_count],
             hole=0.55,
             marker_colors=["#f85149", "#3fb950"],
             textinfo="percent",
-            textfont_size=13,
+            textfont_size=12,
         ))
-        fig1.update_layout(**PLOTLY_LAYOUT, legend=dict(orientation="v", x=0.75, y=0.5, font_color="#c9d1d9"))
+        fig1.update_layout(**PLOTLY_LAYOUT, legend=dict(orientation="v", x=0.6, y=0.5, font_color="#c9d1d9", font_size=11))
         st.plotly_chart(fig1, use_container_width=True)
         st.markdown('<div class="info-box">ℹ️ Classified as Elevated or Low Risk based on model-predicted probability of adverse outcome.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    with col_right:
+    with pie_r:
         st.markdown('<span style="color:#e6edf3;font-weight:600;">Historical Outcome Distribution (DEATH_EVENT)</span>', unsafe_allow_html=True)
         fig2 = go.Figure(go.Pie(
-            labels=["Adverse Outcome (Death)", "Stable Outcome (Survived)"],
-            values=[int(observed_count), survived],
+            labels=[f"Stable Outcome\n(Survived) ({survived})", f"Adverse Outcome\n(Death) ({int(observed_count)})"],
+            values=[survived, int(observed_count)],
             hole=0.55,
-            marker_colors=["#f85149", "#3fb950"],
+            marker_colors=["#3fb950", "#f85149"],
             textinfo="percent",
-            textfont_size=13,
+            textfont_size=12,
         ))
-        fig2.update_layout(**PLOTLY_LAYOUT, legend=dict(orientation="v", x=0.65, y=0.5, font_color="#c9d1d9"))
+        fig2.update_layout(**PLOTLY_LAYOUT, legend=dict(orientation="v", x=0.55, y=0.5, font_color="#c9d1d9", font_size=11))
         st.plotly_chart(fig2, use_container_width=True)
         st.markdown('<div class="info-box">ℹ️ Distribution reflects actual outcomes observed in the historical dataset.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with feat_col:
+        st.markdown('<span style="color:#e6edf3;font-weight:600;">Top 5 Contributing Risk Factors</span>', unsafe_allow_html=True)
+        top5 = importance_df.nlargest(5, 'Importance').sort_values('Importance')
+        top5_labels = [FEATURE_LABELS.get(f, f).split(' (')[0] for f in top5['Feature']]
+        fig_imp = go.Figure(go.Bar(
+            x=top5['Importance'],
+            y=top5_labels,
+            orientation='h',
+            marker_color='#7c3aed',
+            text=top5['Importance'].round(3),
+            textposition='outside',
+            textfont=dict(color='#c9d1d9', size=11),
+        ))
+        fig_imp.update_layout(
+            paper_bgcolor="#161b22", plot_bgcolor="#161b22",
+            font_color="#c9d1d9",
+            margin=dict(t=10, b=10, l=10, r=50),
+            height=280,
+            xaxis=dict(title='Importance Score', gridcolor="#30363d", tickfont_size=11),
+            yaxis=dict(gridcolor="#30363d", tickfont_size=11),
+            showlegend=False,
+        )
+        st.plotly_chart(fig_imp, use_container_width=True)
+        st.markdown('<div class="info-box">ℹ️ Higher importance score indicates greater impact on prediction.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<span style="color:#e6edf3;font-size:1.1rem;font-weight:600;">Key Insights</span>', unsafe_allow_html=True)
+
+    # ── Row 4: analytical Key Insights ────────────────────────────────────
+    st.markdown('<span style="color:#e6edf3;font-size:1.05rem;font-weight:600;">Key Insights</span>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    importance_df = pd.read_csv(IMPORTANCE_PATH)
-    top4 = importance_df.head(4)['Feature'].tolist()
-    top4_labels = [FEATURE_LABELS.get(f, f).split(' (')[0] for f in top4]
-    top4_str    = ', '.join(top4_labels)
+    top2_features = importance_df.nlargest(2, 'Importance')['Feature'].tolist()
+    top2_labels   = [FEATURE_LABELS.get(f, f).split(' (')[0] for f in top2_features]
+    flag_gap      = elevated_count/patient_count*100 - observed_mortality
 
-    ki1, ki2, ki3, ki4 = st.columns(4)
+    ki1, ki2, ki3, ki4, ki5 = st.columns(5)
+
     ki1.markdown(f"""<div class="section-card" style="text-align:center;">
-        <div style="font-size:1.5rem;margin-bottom:0.5rem;">👥</div>
-        <div style="font-size:1.4rem;font-weight:700;color:#58a6ff;">{elevated_count/patient_count*100:.2f}%</div>
-        <div style="font-size:0.8rem;color:#8b949e;">of patients are predicted as Elevated Risk.</div>
+        <div style="font-size:1.4rem;margin-bottom:0.4rem;">❤️</div>
+        <div style="font-size:1.3rem;font-weight:700;color:#e3b341;">{observed_mortality:.2f}%</div>
+        <div style="font-size:0.78rem;color:#8b949e;margin-top:0.3rem;line-height:1.5;">
+            Historical mortality rate shows the outcome prevalence in the dataset.
+        </div>
     </div>""", unsafe_allow_html=True)
+
     ki2.markdown(f"""<div class="section-card" style="text-align:center;">
-        <div style="font-size:1.5rem;margin-bottom:0.5rem;">💓</div>
-        <div style="font-size:1.4rem;font-weight:700;color:#e3b341;">{observed_mortality:.2f}%</div>
-        <div style="font-size:0.8rem;color:#8b949e;">historical mortality rate in this dataset.</div>
+        <div style="font-size:1.4rem;margin-bottom:0.4rem;">📈</div>
+        <div style="font-size:1.3rem;font-weight:700;color:#e3b341;">{recall_val:.2f}%</div>
+        <div style="font-size:0.78rem;color:#8b949e;margin-top:0.3rem;line-height:1.5;">
+            Recall indicates the model identifies a majority of high-risk patients.
+        </div>
     </div>""", unsafe_allow_html=True)
+
     ki3.markdown(f"""<div class="section-card" style="text-align:center;">
-        <div style="font-size:1.5rem;margin-bottom:0.5rem;">📊</div>
-        <div style="font-size:1.4rem;font-weight:700;color:#3fb950;">{accuracy_val:.2f}%</div>
-        <div style="font-size:0.8rem;color:#8b949e;">model accuracy on cross-validation.</div>
+        <div style="font-size:1.4rem;margin-bottom:0.4rem;">🎯</div>
+        <div style="font-size:1.3rem;font-weight:700;color:#39d0d8;">{roc_val:.2f}</div>
+        <div style="font-size:0.78rem;color:#8b949e;margin-top:0.3rem;line-height:1.5;">
+            AUC-ROC of {roc_val:.2f} indicates moderate discriminatory capability of the model.
+        </div>
     </div>""", unsafe_allow_html=True)
+
     ki4.markdown(f"""<div class="section-card" style="text-align:center;">
-        <div style="font-size:1.5rem;margin-bottom:0.5rem;">💡</div>
-        <div style="font-size:0.85rem;font-weight:600;color:#bc8cff;margin-bottom:0.25rem;">Top risk drivers include:</div>
-        <div style="font-size:0.78rem;color:#8b949e;">{top4_str}.</div>
+        <div style="font-size:1.4rem;margin-bottom:0.4rem;">🔬</div>
+        <div style="font-size:0.82rem;font-weight:600;color:#bc8cff;margin-bottom:0.3rem;">Top risk drivers</div>
+        <div style="font-size:0.78rem;color:#8b949e;line-height:1.5;">
+            {top2_labels[0]} and {top2_labels[1]} are the top contributors to elevated risk predictions.
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+    ki5.markdown(f"""<div class="section-card" style="text-align:center;">
+        <div style="font-size:1.4rem;margin-bottom:0.4rem;">⚖️</div>
+        <div style="font-size:0.82rem;font-weight:600;color:#e3b341;margin-bottom:0.3rem;">Risk vs. Mortality gap</div>
+        <div style="font-size:0.78rem;color:#8b949e;line-height:1.5;">
+            Predicted elevated-risk rate ({elevated_count/patient_count*100:.1f}%) is higher than the observed
+            mortality rate, reflecting conservative risk flagging.
+        </div>
     </div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<span style="color:#e6edf3;font-size:1.1rem;font-weight:600;">Cohort Risk Patterns</span>', unsafe_allow_html=True)
+
+    # ── Row 5: Cohort Risk Patterns ────────────────────────────────────────
+    st.markdown('<span style="color:#e6edf3;font-size:1.05rem;font-weight:600;">Cohort Risk Patterns</span>', unsafe_allow_html=True)
     st.markdown('<span style="color:#8b949e;font-size:0.85rem;">Mortality and high-risk trends across key clinical indicators.</span>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     df_full = pd.read_csv(DATA_PATH)
-    df_full['risk_category'] = predictions_df['probability'].apply(
-        lambda p: 'High Risk' if p >= RISK_THRESHOLDS['HIGH']
-        else ('Medium Risk' if p >= RISK_THRESHOLDS['MEDIUM'] else 'Low Risk')
-    )
     df_full['probability'] = predictions_df['probability']
 
     COHORT_PLOTLY = dict(
@@ -575,14 +656,12 @@ if "Dashboard" in page:
         yaxis=dict(gridcolor="#30363d"),
     )
 
-    # ── Prepare cohort data ───────────────────────────────────────────────
     df_full['ef_band'] = pd.cut(
         df_full['ejection_fraction'],
         bins=[0, 20, 30, 40, 55, 100],
         labels=['≤20%', '21–30%', '31–40%', '41–55%', '>55%']
     )
-    ef_mortality = df_full.groupby('ef_band', observed=True)['DEATH_EVENT'].mean() * 100
-    ef_df = ef_mortality.reset_index()
+    ef_df = df_full.groupby('ef_band', observed=True)['DEATH_EVENT'].mean().mul(100).reset_index()
     ef_df.columns = ['EF Band', 'Mortality Rate (%)']
 
     df_full['sc_band'] = pd.cut(
@@ -590,8 +669,7 @@ if "Dashboard" in page:
         bins=[0, 1.2, 2.0, 4.0, 100],
         labels=['≤1.2', '1.2–2.0', '2.0–4.0', '>4.0']
     )
-    sc_mortality = df_full.groupby('sc_band', observed=True)['DEATH_EVENT'].mean() * 100
-    sc_df = sc_mortality.reset_index()
+    sc_df = df_full.groupby('sc_band', observed=True)['DEATH_EVENT'].mean().mul(100).reset_index()
     sc_df.columns = ['Creatinine Band', 'Mortality Rate (%)']
 
     df_full['age_band'] = pd.cut(
@@ -599,31 +677,11 @@ if "Dashboard" in page:
         bins=[0, 50, 60, 70, 80, 120],
         labels=['<50', '50–60', '60–70', '70–80', '>80']
     )
-    age_mortality = df_full.groupby('age_band', observed=True)['DEATH_EVENT'].mean() * 100
-    age_df = age_mortality.reset_index()
+    age_df = df_full.groupby('age_band', observed=True)['DEATH_EVENT'].mean().mul(100).reset_index()
     age_df.columns = ['Age Group', 'Mortality Rate (%)']
-
-    conditions = {
-        'Diabetes':            'diabetes',
-        'High Blood Pressure': 'high_blood_pressure',
-        'Anaemia':             'anaemia',
-        'Smoking':             'smoking',
-    }
-    condition_rows = []
-    for label, col in conditions.items():
-        present     = df_full[df_full[col] == 1]
-        high_risk_r = (present['probability'] >= RISK_THRESHOLDS['HIGH']).mean() * 100
-        mortality_r = present['DEATH_EVENT'].mean() * 100
-        condition_rows.append({
-            'Condition':          label,
-            'High Risk Rate (%)': round(high_risk_r, 1),
-            'Mortality Rate (%)': round(mortality_r, 1),
-        })
-    cond_df = pd.DataFrame(condition_rows)
 
     row1_col1, row1_col2, row1_col3 = st.columns(3)
 
-    # ── Chart 1 — Mortality rate by ejection fraction band ────────────────
     with row1_col1:
         st.markdown('<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">Mortality Rate by Ejection Fraction</span>', unsafe_allow_html=True)
         fig_ef = px.bar(ef_df, x='EF Band', y='Mortality Rate (%)',
@@ -633,7 +691,6 @@ if "Dashboard" in page:
         st.plotly_chart(fig_ef, use_container_width=True)
         st.markdown('<div class="info-box">ℹ️ Lower ejection fraction bands show higher observed mortality rates.</div>', unsafe_allow_html=True)
 
-    # ── Chart 2 — Mortality rate by serum creatinine band ─────────────────
     with row1_col2:
         st.markdown('<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">Mortality Rate by Serum Creatinine</span>', unsafe_allow_html=True)
         fig_sc = px.bar(sc_df, x='Creatinine Band', y='Mortality Rate (%)',
@@ -643,7 +700,6 @@ if "Dashboard" in page:
         st.plotly_chart(fig_sc, use_container_width=True)
         st.markdown('<div class="info-box">ℹ️ Elevated creatinine is associated with higher observed mortality.</div>', unsafe_allow_html=True)
 
-    # ── Chart 3 — Mortality rate by age band ──────────────────────────────
     with row1_col3:
         st.markdown('<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">Mortality Rate by Age Group</span>', unsafe_allow_html=True)
         fig_age = px.bar(age_df, x='Age Group', y='Mortality Rate (%)',
@@ -656,7 +712,22 @@ if "Dashboard" in page:
     st.markdown("<br>", unsafe_allow_html=True)
     row2_col1, row2_col2 = st.columns(2)
 
-    # ── Chart 4 — High risk count by boolean risk factors ─────────────────
+    conditions = {
+        'Diabetes':            'diabetes',
+        'High Blood Pressure': 'high_blood_pressure',
+        'Anaemia':             'anaemia',
+        'Smoking':             'smoking',
+    }
+    condition_rows = []
+    for label, col in conditions.items():
+        present = df_full[df_full[col] == 1]
+        condition_rows.append({
+            'Condition':          label,
+            'High Risk Rate (%)': round((present['probability'] >= RISK_THRESHOLDS['HIGH']).mean() * 100, 1),
+            'Mortality Rate (%)': round(present['DEATH_EVENT'].mean() * 100, 1),
+        })
+    cond_df = pd.DataFrame(condition_rows)
+
     with row2_col1:
         st.markdown('<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">High Risk Rate by Clinical Condition</span>', unsafe_allow_html=True)
         fig_cond = px.bar(
@@ -672,7 +743,6 @@ if "Dashboard" in page:
         st.plotly_chart(fig_cond, use_container_width=True)
         st.markdown('<div class="info-box">ℹ️ Patients with these conditions show elevated high-risk and mortality rates.</div>', unsafe_allow_html=True)
 
-    # ── Chart 5 — Predicted risk distribution histogram ───────────────────
     with row2_col2:
         st.markdown('<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">Predicted Risk Score Distribution</span>', unsafe_allow_html=True)
         fig_hist = px.histogram(
@@ -693,16 +763,17 @@ if "Dashboard" in page:
         st.plotly_chart(fig_hist, use_container_width=True)
         st.markdown('<div class="info-box">ℹ️ Dashed lines show Medium (0.40) and High (0.70) risk thresholds.</div>', unsafe_allow_html=True)
 
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="info-box">ℹ️ This dashboard provides an overview of model predictions and historical data analysis for educational and research purposes only.</div>', unsafe_allow_html=True)
+
     st.markdown("""<div class="footer">
-        <span>❤️ HeartGuard AI-Powered Heart Failure Risk Intelligence &nbsp;|&nbsp; Built with Streamlit, Scikit-learn, Pandas</span>
+        <span>❤️ Heart Failure Risk Stratification & Recommendation System &nbsp;|&nbsp; Built with Streamlit, Scikit-learn, Pandas</span>
         <span>For educational and research use only</span>
     </div>""", unsafe_allow_html=True)
 
 
 # ── Page: Patient Review ───────────────────────────────────────────────────────
 elif "Patient Review" in page:
-    import pickle
-
     page_header("Patient Review",
         "Select a patient from the dataset to view risk assessment, key indicators, and recommendation.")
 
@@ -758,6 +829,7 @@ elif "Patient Review" in page:
     left_col, right_col = st.columns([1, 1.1])
 
     with left_col:
+        st.markdown('<span style="color:#e6edf3;font-weight:600;">Patient Details (Clinical Indicators)</span>', unsafe_allow_html=True)
         rows_html = ""
         for feature, label in FEATURE_LABELS.items():
             val = patient_dict[feature]
@@ -772,19 +844,18 @@ elif "Patient Review" in page:
             rows_html += f"<tr><td>{label}</td><td><b style='color:#e6edf3;'>{display}</b></td></tr>"
 
         st.markdown(f"""
-        <div class="section-card">
-            <div style="font-weight:600;color:#e6edf3;margin-bottom:0.75rem;">Patient Details (Clinical Indicators)</div>
-            <table class="styled-table">
-                <thead><tr><th>Indicator</th><th>Value</th></tr></thead>
-                <tbody>{rows_html}</tbody>
-            </table>
-            <div class="info-box" style="margin-top:0.75rem;">ℹ️ These values are from the historical dataset.</div>
-        </div>""", unsafe_allow_html=True)
+        <table class="styled-table">
+            <thead><tr><th>Indicator</th><th>Value</th></tr></thead>
+            <tbody>{rows_html}</tbody>
+        </table>
+        <div class="info-box" style="margin-top:0.75rem;">ℹ️ These values are from the historical dataset.</div>
+        """, unsafe_allow_html=True)
 
         if ranked:
-            st.markdown('<div style="font-weight:600;color:#e6edf3;margin:1rem 0 0.5rem 0;">Top Contributing Risk Factors</div>', unsafe_allow_html=True)
+            st.markdown('<br><span style="color:#e6edf3;font-weight:600;">Top Contributing Risk Factors</span>', unsafe_allow_html=True)
             st.markdown(factor_bars(ranked, importance_map), unsafe_allow_html=True)
             st.markdown('<div style="font-size:0.75rem;color:#6e7681;margin-top:0.25rem;">Percentages indicate relative contribution to the prediction.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with right_col:
         st.markdown('<span style="color:#e6edf3;font-weight:600;">Risk Assessment</span>', unsafe_allow_html=True)
@@ -929,41 +1000,38 @@ elif "Model Performance" in page:
             <span style="font-weight:600;color:{gap_color};">Overfitting Gap: {gap:.3f}</span>
             <span style="color:#8b949e;font-size:0.85rem;"> — {gap_text}</span>
         </div>""", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with right_col:
-        gap = gap_row['Mean'].values[0] if len(gap_row) else 0
-        gap_color = "#3fb950" if gap < 0.05 else "#e3b341"
+        st.markdown('<span style="color:#e6edf3;font-weight:600;">About This Model</span>', unsafe_allow_html=True)
         st.markdown(f"""
-        <div class="section-card">
-            <div style="font-weight:600;color:#e6edf3;margin-bottom:0.75rem;">About This Model</div>
-            <div class="info-box" style="margin-bottom:1rem;">ℹ️ This Random Forest model predicts the likelihood of
-                adverse outcome (DEATH_EVENT = 1) based on clinical indicators.
-                Evaluation uses repeated stratified cross-validation.</div>
-            <table class="styled-table">
-                <tbody>
-                    <tr><td style="color:#8b949e;">Model Type</td><td><b style="color:#e6edf3;">Random Forest Classifier</b></td></tr>
-                    <tr><td style="color:#8b949e;">Target</td><td><b style="color:#e6edf3;">DEATH_EVENT (1 = Death, 0 = Survived)</b></td></tr>
-                    <tr><td style="color:#8b949e;">Training Algorithm</td><td><b style="color:#e6edf3;">scikit-learn RandomForestClassifier</b></td></tr>
-                    <tr><td style="color:#8b949e;">Evaluation</td><td><b style="color:#e6edf3;">Repeated Stratified K-Fold (5×10)</b></td></tr>
-                    <tr><td style="color:#8b949e;">Class Weighting</td><td><b style="color:#e6edf3;">Balanced</b></td></tr>
-                    <tr><td style="color:#8b949e;">Max Depth</td><td><b style="color:#e6edf3;">3</b></td></tr>
-                    <tr><td style="color:#8b949e;">Min Samples Leaf</td><td><b style="color:#e6edf3;">15</b></td></tr>
-                    <tr><td style="color:#8b949e;">Trained On</td><td><b style="color:#e6edf3;">299 patients</b></td></tr>
-                </tbody>
-            </table>
-            <div style="margin-top:1rem;padding:0.75rem 1rem;background:#12261e;border:1px solid #3fb95044;border-radius:8px;">
-                <span style="color:#3fb950;font-weight:600;">✅ Model Status</span><br>
-                <span style="font-size:0.82rem;color:#c9d1d9;">Model performance is consistent and acceptable for
-                risk stratification and decision support purposes.</span>
-            </div>
+        <div class="info-box" style="margin:0.75rem 0 1rem 0;">ℹ️ This Random Forest model predicts the likelihood of
+            adverse outcome (DEATH_EVENT = 1) based on clinical indicators.
+            Evaluation uses repeated stratified cross-validation.</div>
+        <table class="styled-table">
+            <tbody>
+                <tr><td style="color:#8b949e;">Model Type</td><td><b style="color:#e6edf3;">Random Forest Classifier</b></td></tr>
+                <tr><td style="color:#8b949e;">Target</td><td><b style="color:#e6edf3;">DEATH_EVENT (1 = Death, 0 = Survived)</b></td></tr>
+                <tr><td style="color:#8b949e;">Training Algorithm</td><td><b style="color:#e6edf3;">scikit-learn RandomForestClassifier</b></td></tr>
+                <tr><td style="color:#8b949e;">Evaluation</td><td><b style="color:#e6edf3;">Repeated Stratified K-Fold (5×10)</b></td></tr>
+                <tr><td style="color:#8b949e;">Class Weighting</td><td><b style="color:#e6edf3;">Balanced</b></td></tr>
+                <tr><td style="color:#8b949e;">Max Depth</td><td><b style="color:#e6edf3;">3</b></td></tr>
+                <tr><td style="color:#8b949e;">Min Samples Leaf</td><td><b style="color:#e6edf3;">15</b></td></tr>
+                <tr><td style="color:#8b949e;">Trained On</td><td><b style="color:#e6edf3;">299 patients</b></td></tr>
+            </tbody>
+        </table>
+        <div style="margin-top:1rem;padding:0.75rem 1rem;background:#12261e;border:1px solid #3fb95044;border-radius:8px;">
+            <span style="color:#3fb950;font-weight:600;">✅ Model Status</span><br>
+            <span style="font-size:0.82rem;color:#c9d1d9;">Model performance is consistent and acceptable for
+            risk stratification and decision support purposes.</span>
         </div>""", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<p style="font-size:0.75rem;color:#6e7681;margin-top:1rem;">Note: Metrics are computed via cross-validation and may vary with different random seeds.</p>', unsafe_allow_html=True)
 
 
 # ── Page: Feature Importance ───────────────────────────────────────────────────
 elif "Feature Importance" in page:
-    import plotly.express as px
 
     page_header("Feature Importance",
         "Top clinical indicators that contribute most to the model's prediction of adverse outcome.")
@@ -1002,9 +1070,9 @@ elif "Feature Importance" in page:
         st.markdown('</div>', unsafe_allow_html=True)
 
     with right_col:
+        st.markdown('<span style="color:#e6edf3;font-weight:600;">Full Importance Table</span>', unsafe_allow_html=True)
         display_df = importance_df[['Feature', 'Importance']].copy()
         display_df['Importance'] = display_df['Importance'].round(4)
-        st.markdown('<div class="section-card"><span style="color:#e6edf3;font-weight:600;">Full Importance Table</span>', unsafe_allow_html=True)
         st.dataframe(display_df.set_index('Feature'), use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1044,8 +1112,6 @@ elif "Feature Importance" in page:
 
 # ── Page: Simulated Assessment ─────────────────────────────────────────────────
 elif "Simulated" in page:
-    import pickle
-
     page_header("Simulated Patient Assessment",
         "Enter patient clinical indicators to estimate risk and receive recommendation.")
 
@@ -1061,7 +1127,6 @@ elif "Simulated" in page:
     col_form, col_risk, col_rec = st.columns([1, 1, 1])
 
     with col_form:
-        # st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<span style="color:#e6edf3;font-weight:600;">1. Enter Patient Indicators</span>', unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         age     = st.number_input("👤 Age (years)",               min_value=1,   max_value=120, value=65)
@@ -1102,16 +1167,6 @@ elif "Simulated" in page:
     with col_risk:
         # Personalized contribution: importance × how abnormal the patient's value is
         NORMAL_RANGES = {
-            'ejection_fraction':        (55, 70,   'low'),   # low = bad direction
-            'serum_creatinine':         (0.7, 1.2, 'high'),  # high = bad
-            'serum_sodium':             (135, 145, 'low'),   # low = bad
-            'age':                      (0,  60,   'high'),  # higher = worse
-            'creatinine_phosphokinase': (40, 308,  'high'),
-            'platelets':                (150000, 400000, None),  # both extremes bad
-            'ejection_fraction':        (55, 70,   'low'),
-        }
-
-        NORMAL_RANGES = {
             'ejection_fraction':        (55,     70,     'low'),
             'serum_creatinine':         (0.7,    1.2,    'high'),
             'serum_sodium':             (135,    145,    'low'),
@@ -1133,14 +1188,14 @@ elif "Simulated" in page:
                 return max(0, (value - hi) / (hi - lo + 1e-9))
             elif bad_dir == 'low':
                 return max(0, (lo - value) / (hi - lo + 1e-9))
-            else:  # both extremes bad
+            else:
                 mid = (lo + hi) / 2
                 return abs(value - mid) / ((hi - lo) / 2 + 1e-9)
 
         personalized = {}
         for feature in FEATURES:
-            imp   = importance_map.get(feature, 0)
-            val   = patient_sim[feature]
+            imp    = importance_map.get(feature, 0)
+            val    = patient_sim[feature]
             abnorm = abnormality_score(feature, val)
             personalized[feature] = imp * (1 + abnorm)
 
@@ -1162,7 +1217,7 @@ elif "Simulated" in page:
                 f'<div class="factor-pct">{pct}%</div>'
                 '</div>'
             )
-        top_factors_html += '<div style="font-size:0.75rem;color:#6e7681;margin-top:0.25rem;">Based on model importance × how abnormal this patient\'s values are.</div>'
+        top_factors_html += '<div style="font-size:0.75rem;color:#6e7681;margin-top:0.25rem;">Based on model importance \xd7 how abnormal this patient\'s values are.</div>'
 
         factors_section = (
             "<div style='margin-top:1rem;'>"
@@ -1184,17 +1239,14 @@ elif "Simulated" in page:
             <div style="background:{rc}18;border:1px solid {rc}44;border-radius:8px;
                  padding:0.75rem;text-align:center;margin-bottom:1rem;">
                 <span style="color:{rc};font-weight:700;font-size:1.1rem;">
-                    ⚠️ {risk_category['label'].upper()}
+                    \u26a0\ufe0f {risk_category['label'].upper()}
                 </span>
             </div>
-            <div class="info-box">ℹ️ This profile matches historical patients with {"elevated" if prob >= RISK_THRESHOLDS["MEDIUM"] else "lower"} short-term adverse outcomes.</div>
+            <div class="info-box">\u2139\ufe0f This profile matches historical patients with {"elevated" if prob >= RISK_THRESHOLDS["MEDIUM"] else "lower"} short-term adverse outcomes.</div>
             {factors_section}
         </div>""", unsafe_allow_html=True)
 
-        # ── Paste this block AFTER the Top Contributing Factors section in col_risk,
-        # ── just before the closing:  st.markdown('</div>', unsafe_allow_html=True)
-        # ── (the one that closes the section-card div around line 946)
-
+        # ── Prediction Explanation ────────────────────────────────────────────
         explanation_lines = []
 
         ef_val = patient_sim['ejection_fraction']
@@ -1299,7 +1351,6 @@ elif "Simulated" in page:
         </div>""", unsafe_allow_html=True)
 
     with col_rec:
-        # st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<span style="color:#e6edf3;font-weight:600;">3. Recommendation</span>', unsafe_allow_html=True)
         cat = risk_category['category']
 
@@ -1359,7 +1410,7 @@ elif "About" in page:
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        st.markdown("""<div class="section-card" style="overflow:hidden;">
+        st.markdown("""<div class="section-card">
             <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1rem;">
                 <div style="background:#0d1b2a;border-radius:8px;padding:0.5rem;font-size:1.25rem;">🗄️</div>
                 <b style="color:#e6edf3;">1. Dataset Information</b>
@@ -1367,20 +1418,20 @@ elif "About" in page:
             <div style="font-size:0.85rem;color:#8b949e;margin-bottom:1rem;">
                 The model is built using the Heart Failure Clinical Records Dataset.
             </div>
-            <table class="styled-table" style="width:100%;table-layout:fixed;">
+            <table class="styled-table">
                 <tbody>
-                    <tr><td style="color:#8b949e;width:40%;">Source</td><td style="word-break:break-word;"><b style="color:#e6edf3;">Kaggle</b></td></tr>
-                    <tr><td style="color:#8b949e;">File</td><td style="word-break:break-word;"><b style="color:#e6edf3;">heart_failure_clinical_records_dataset.csv</b></td></tr>
-                    <tr><td style="color:#8b949e;">Total Records</td><td style="word-break:break-word;"><b style="color:#e6edf3;">299</b></td></tr>
-                    <tr><td style="color:#8b949e;">Features</td><td style="word-break:break-word;"><b style="color:#e6edf3;">11 clinical indicators</b></td></tr>
-                    <tr><td style="color:#8b949e;">Target Variable</td><td style="word-break:break-word;"><b style="color:#e6edf3;">DEATH_EVENT (1 = Death, 0 = Survived)</b></td></tr>
+                    <tr><td style="color:#8b949e;">Source</td><td><b style="color:#e6edf3;">Kaggle</b></td></tr>
+                    <tr><td style="color:#8b949e;">File</td><td><b style="color:#e6edf3;">heart_failure_clinical_records_dataset.csv</b></td></tr>
+                    <tr><td style="color:#8b949e;">Total Records</td><td><b style="color:#e6edf3;">299</b></td></tr>
+                    <tr><td style="color:#8b949e;">Features</td><td><b style="color:#e6edf3;">11 clinical indicators</b></td></tr>
+                    <tr><td style="color:#8b949e;">Target Variable</td><td><b style="color:#e6edf3;">DEATH_EVENT (1 = Death, 0 = Survived)</b></td></tr>
                 </tbody>
             </table>
             <div class="info-box" style="margin-top:1rem;">ℹ️ This dataset contains de-identified patient clinical records.</div>
         </div>""", unsafe_allow_html=True)
 
     with c2:
-        st.markdown("""
+        st.markdown("""<div class="section-card">
             <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1rem;">
                 <div style="background:#12261e;border-radius:8px;padding:0.5rem;font-size:1.25rem;">⚙️</div>
                 <b style="color:#e6edf3;">2. Methodology</b>
@@ -1405,6 +1456,7 @@ elif "About" in page:
                 <div><div style="font-weight:600;font-size:0.85rem;color:#e6edf3;">{title}</div>
                 <div style="font-size:0.8rem;color:#8b949e;">{desc}</div></div>
             </div>""", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with c3:
         st.markdown("""<div class="section-card">
@@ -1466,6 +1518,6 @@ elif "About" in page:
         </div>""", unsafe_allow_html=True)
 
     st.markdown("""<div class="footer">
-        <span>❤️ HeartGuard AI-Powered Heart Failure Risk Intelligence &nbsp;|&nbsp; Built with Streamlit, Scikit-learn, Pandas</span>
+        <span>❤️ Heart Failure Risk Stratification & Recommendation System &nbsp;|&nbsp; Built with Streamlit, Scikit-learn, Pandas</span>
         <span>© 2025 All rights reserved</span>
     </div>""", unsafe_allow_html=True)
