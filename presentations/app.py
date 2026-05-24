@@ -1190,76 +1190,192 @@ elif "Feature Importance" in page:
 
     importance_df = pd.read_csv(IMPORTANCE_PATH)
 
+    # Enrich with clinical context
+    RISK_DIRECTION = {
+        'serum_creatinine':         ('up',   'Higher values associated with elevated risk'),
+        'ejection_fraction':        ('down', 'Lower values associated with elevated risk'),
+        'age':                      ('up',   'Higher values associated with elevated risk'),
+        'serum_sodium':             ('down', 'Lower values associated with elevated risk'),
+        'creatinine_phosphokinase': ('up',   'Higher values associated with elevated risk'),
+        'platelets':                ('down', 'Lower values associated with elevated risk'),
+        'sex':                      ('up',   'Higher values associated with elevated risk'),
+        'high_blood_pressure':      ('flag', 'Presence associated with elevated risk'),
+        'anaemia':                  ('flag', 'Presence associated with elevated risk'),
+        'smoking':                  ('flag', 'Presence associated with elevated risk'),
+        'diabetes':                 ('flag', 'Presence associated with elevated risk'),
+    }
+
+    CLINICAL_CONTEXT = {
+        'serum_creatinine':         ('🫀', 'Kidney function indicator'),
+        'ejection_fraction':        ('❤️', 'Cardiac pumping efficiency'),
+        'age':                      ('🧑', 'Patient age (risk increases with age)'),
+        'serum_sodium':             ('💧', 'Electrolyte balance indicator'),
+        'creatinine_phosphokinase': ('💜', 'Muscle enzyme / tissue stress'),
+        'platelets':                ('⭕', 'Blood component / clotting indicator'),
+        'sex':                      ('⚧',  'Biological sex'),
+        'high_blood_pressure':      ('🩺', 'History of hypertension'),
+        'anaemia':                  ('🔴', 'Reduced blood oxygen-carrying capacity'),
+        'smoking':                  ('🚬', 'Smoking status'),
+        'diabetes':                 ('🩸', 'Blood sugar regulation'),
+    }
+
     st.markdown("""
     <div class="info-box" style="margin-bottom:1.5rem;">
-        <b>ℹ️ Interpretation Guide:</b> Importance is derived from Gini impurity reduction across all decision trees.
-        Higher values indicate stronger influence on the prediction. These represent statistical associations, not clinical causation.
+        <div>
+            <b>ℹ️ Interpretation Guide:</b> Feature importance scores are derived from Gini impurity reduction
+            across all decision trees in the model.
+            Higher scores indicate stronger influence on the model's predictions.
+            These reflect statistical associations, not clinical or epidemiological causation.
+        </div>
     </div>""", unsafe_allow_html=True)
 
-    left_col, right_col = st.columns([1.2, 1])
+    left_col, right_col = st.columns([1, 1.4])
 
     with left_col:
-        st.markdown('<span style="color:#e6edf3;font-weight:600;">Feature Importance (Top 10)</span>', unsafe_allow_html=True)
-        fig = px.bar(
-            importance_df.sort_values('Importance'),
-            x='Importance', y='Feature', orientation='h',
-            color='Importance',
-            color_continuous_scale=['#3fb950', '#e3b341', '#f85149'],
-        )
+        st.markdown("""
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+            <span style="font-size:1rem;">📊</span>
+            <span style="font-weight:600;color:#e6edf3;">Feature Importance (Top 10)</span>
+        </div>""", unsafe_allow_html=True)
+
+        sorted_df = importance_df.sort_values('Importance')
+        max_imp   = sorted_df['Importance'].max()
+
+        fig = go.Figure(go.Bar(
+            x=sorted_df['Importance'],
+            y=sorted_df['Feature'],
+            orientation='h',
+            marker=dict(
+                color=list(range(len(sorted_df))),
+                colorscale=[
+                    [0.0,  '#f85149'],
+                    [0.15, '#e3742c'],
+                    [0.3,  '#e3b341'],
+                    [0.45, '#3fb950'],
+                    [0.6,  '#39d0d8'],
+                    [0.75, '#58a6ff'],
+                    [0.9,  '#bc8cff'],
+                    [1.0,  '#f85149'],
+                ],
+                showscale=False,
+            ),
+            text=sorted_df['Importance'].round(4),
+            textposition='outside',
+            textfont=dict(color='#c9d1d9', size=10),
+        ))
         fig.update_layout(
-            coloraxis_showscale=False, yaxis_title=None,
-            xaxis_title='Gini Importance',
-            margin=dict(t=10, b=10, l=10, r=10),
-            height=380,
-            paper_bgcolor="#161b22", plot_bgcolor="#161b22",
+            coloraxis_showscale=False,
+            yaxis_title=None,
+            xaxis_title='Feature Importance Score<br><span style="font-size:10px;color:#6e7681;">(Derived using Gini impurity reduction)</span>',
+            margin=dict(t=10, b=40, l=10, r=55),
+            height=340,
+            paper_bgcolor="#161b22",
+            plot_bgcolor="#161b22",
             font_color="#c9d1d9",
-            xaxis=dict(gridcolor="#30363d"),
-            yaxis=dict(gridcolor="#30363d"),
+            xaxis=dict(gridcolor="#30363d", range=[0, max_imp * 1.3], tickfont_size=10),
+            yaxis=dict(gridcolor="#30363d", tickfont_size=11),
         )
-        fig.update_traces(text=importance_df.sort_values('Importance')['Importance'].round(2),
-                         textposition='outside', textfont_color="#c9d1d9")
         st.plotly_chart(fig, use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with right_col:
-        st.markdown('<span style="color:#e6edf3;font-weight:600;">Full Importance Table</span>', unsafe_allow_html=True)
-        display_df = importance_df[['Feature', 'Importance']].copy()
-        display_df['Importance'] = display_df['Importance'].round(4)
-        st.dataframe(display_df.set_index('Feature'), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+            <span style="font-size:1rem;">📋</span>
+            <span style="font-weight:600;color:#e6edf3;">Full Importance Table</span>
+        </div>""", unsafe_allow_html=True)
+
+        table_rows = ""
+        for rank, (_, row) in enumerate(importance_df.sort_values('Importance', ascending=False).iterrows(), 1):
+            feat = row['Feature']
+            imp  = row['Importance']
+            direction, dir_label = RISK_DIRECTION.get(feat, ('up', '—'))
+            ctx_icon, ctx_label  = CLINICAL_CONTEXT.get(feat, ('📌', feat))
+
+            if direction == 'up':
+                arrow = '<span style="color:#f85149;font-size:0.9rem;">↑</span>'
+            elif direction == 'down':
+                arrow = '<span style="color:#58a6ff;font-size:0.9rem;">↓</span>'
+            else:
+                arrow = '<span style="color:#e3b341;font-size:0.9rem;">⚑</span>'
+
+            table_rows += f"""
+            <tr>
+                <td style="color:#6e7681;text-align:center;">{rank}</td>
+                <td style="color:#e6edf3;font-weight:500;font-family:monospace;font-size:0.78rem;word-break:keep-all;white-space:nowrap;">{feat}</td>
+                <td style="color:#c9d1d9;text-align:center;">{imp:.4f}</td>
+                <td style="text-align:left;white-space:nowrap;">{arrow} <span style="font-size:0.7rem;color:#8b949e;">{dir_label}</span></td>
+                <td style="color:#8b949e;font-size:0.78rem;white-space:nowrap;">{ctx_icon} {ctx_label}</td>
+            </tr>"""
+
+        st.markdown(f"""
+        <div style="overflow-x:auto;">
+        <table class="styled-table" style="width:100%;white-space:nowrap;">
+            <thead>
+                <tr>
+                    <th style="text-align:center;padding:0.5rem 0.6rem;">#</th>
+                    <th style="padding:0.5rem 0.6rem;">Feature</th>
+                    <th style="text-align:center;padding:0.5rem 0.6rem;">Score</th>
+                    <th style="padding:0.5rem 0.6rem;">Risk Direction</th>
+                    <th style="padding:0.5rem 0.6rem;">Clinical Context</th>
+                </tr>
+            </thead>
+            <tbody>{table_rows}</tbody>
+        </table>
+        </div>
+        <div style="font-size:0.73rem;color:#6e7681;margin-top:0.6rem;">
+            ℹ️ Scores sum to 1. Higher scores indicate greater influence on predictions.
+        </div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    b1, b2 = st.columns(2)
-    top3 = importance_df.head(3)['Feature'].tolist()
+
+    top3        = importance_df.nlargest(3, 'Importance')['Feature'].tolist()
     top3_labels = [FEATURE_LABELS.get(f, f).split(' (')[0] for f in top3]
 
+    b1, b2 = st.columns(2)
+
     with b1:
-        st.markdown(f"""<div class="section-card">
+        st.markdown(f"""
+        <div class="section-card">
             <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-                <span style="font-size:1.25rem;">💡</span>
+                <div style="background:#12261e;border-radius:8px;padding:0.5rem;flex-shrink:0;">
+                    <span style="font-size:1.25rem;">💡</span>
+                </div>
                 <div>
-                    <div style="font-weight:600;margin-bottom:0.5rem;color:#e6edf3;">Key Takeaway</div>
+                    <div style="font-weight:600;margin-bottom:0.5rem;color:#3fb950;">Key Takeaway</div>
                     <div style="font-size:0.85rem;color:#c9d1d9;line-height:1.6;">
-                        <b style="color:#e6edf3;">{', '.join(top3_labels)}</b> are the most influential indicators in predicting adverse outcomes.
-                        These features were most frequently used by decision trees to separate high-risk from low-risk patients.
+                        <b style="color:#e6edf3;">{', '.join(top3_labels)}</b> are the most influential indicators
+                        in predicting adverse outcomes. These features were most frequently used by the model
+                        to separate high-risk from low-risk patients.
                     </div>
                 </div>
             </div>
         </div>""", unsafe_allow_html=True)
+
     with b2:
-        st.markdown("""<div class="section-card" style="background:#1c1a10;border-color:#e3b34133;">
+        st.markdown("""
+        <div class="section-card" style="background:#1c1a10;border-color:#e3b34133;">
             <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-                <span style="font-size:1.25rem;">📋</span>
+                <div style="background:#2a2010;border-radius:8px;padding:0.5rem;flex-shrink:0;">
+                    <span style="font-size:1.25rem;">📋</span>
+                </div>
                 <div>
                     <div style="font-weight:600;margin-bottom:0.5rem;color:#e3b341;">Notes</div>
                     <ul style="font-size:0.82rem;color:#c9d1d9;line-height:1.8;margin:0;padding-left:1.25rem;">
-                        <li>Importance values are based on Gini impurity reduction.</li>
-                        <li>Higher importance = more frequently used to split data.</li>
+                        <li>Importance values are based on Gini impurity reduction across the ensemble of decision trees.</li>
+                        <li>Higher importance scores indicate stronger influence on model prediction pathways.</li>
+                        <li>Importance reflects statistical associations within the training data and should not be
+                            interpreted as causal clinical relationships.</li>
                         <li>This model is intended for decision support and educational purposes only.</li>
                     </ul>
                 </div>
             </div>
         </div>""", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="info-box" style="margin-top:1rem;">
+        ℹ️ This analysis represents global model explainability.
+        For patient-level explanations, please use the Simulated Patient Assessment module.
+    </div>""", unsafe_allow_html=True)
 
 
 # ── Page: Simulated Assessment ─────────────────────────────────────────────────
