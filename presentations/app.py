@@ -1191,6 +1191,113 @@ elif "Simulated" in page:
             {factors_section}
         </div>""", unsafe_allow_html=True)
 
+        # ── Paste this block AFTER the Top Contributing Factors section in col_risk,
+        # ── just before the closing:  st.markdown('</div>', unsafe_allow_html=True)
+        # ── (the one that closes the section-card div around line 946)
+
+        explanation_lines = []
+
+        ef_val = patient_sim['ejection_fraction']
+        if ef_val < 40:
+            explanation_lines.append(
+                f"Low ejection fraction ({ef_val}%) — heart is pumping less than 40% of blood per beat, "
+                "indicating reduced cardiac output."
+            )
+        elif ef_val < 55:
+            explanation_lines.append(
+                f"Mildly reduced ejection fraction ({ef_val}%) — below the normal range of 55–70%."
+            )
+
+        sc_val = patient_sim['serum_creatinine']
+        if sc_val > 2.0:
+            explanation_lines.append(
+                f"Elevated serum creatinine ({sc_val} mg/dL) — above the normal range (0.7–1.2 mg/dL), "
+                "suggesting reduced kidney function."
+            )
+        elif sc_val > 1.2:
+            explanation_lines.append(
+                f"Borderline serum creatinine ({sc_val} mg/dL) — slightly above normal, "
+                "which may reflect early renal stress."
+            )
+
+        sn_val = patient_sim['serum_sodium']
+        if sn_val < 130:
+            explanation_lines.append(
+                f"Critically low serum sodium ({sn_val} mEq/L) — severe hyponatremia strongly "
+                "associated with poor cardiac outcomes."
+            )
+        elif sn_val < 135:
+            explanation_lines.append(
+                f"Low serum sodium ({sn_val} mEq/L) — below normal (135–145 mEq/L), "
+                "which is linked to worse heart failure prognosis."
+            )
+
+        age_val = int(patient_sim['age'])
+        if age_val > 70:
+            explanation_lines.append(
+                f"Advanced age ({age_val} years) — patients over 70 show higher rates of "
+                "adverse outcomes in this dataset."
+            )
+
+        if patient_sim['diabetes'] == 1:
+            explanation_lines.append(
+                "Diabetes present — associated with accelerated cardiovascular disease and "
+                "worse heart failure outcomes."
+            )
+        if patient_sim['high_blood_pressure'] == 1:
+            explanation_lines.append(
+                "High blood pressure — increases cardiac workload and is linked to "
+                "higher risk of adverse events."
+            )
+        if patient_sim['anaemia'] == 1:
+            explanation_lines.append(
+                "Anaemia present — reduces oxygen-carrying capacity, placing additional "
+                "strain on the heart."
+            )
+        if patient_sim['smoking'] == 1:
+            explanation_lines.append(
+                "Smoking — associated with accelerated arterial damage and reduced "
+                "cardiac reserve."
+            )
+
+        cpk_val = patient_sim['creatinine_phosphokinase']
+        if cpk_val > 1000:
+            explanation_lines.append(
+                f"Elevated CPK ({cpk_val} U/L) — significantly above normal range, "
+                "may indicate myocardial or skeletal muscle stress."
+            )
+
+        if not explanation_lines:
+            explanation_lines.append(
+                "No individual clinical values are outside normal ranges. "
+                "The model's prediction is based on the combined profile of all indicators."
+            )
+
+        outcome_word = "higher" if prob >= RISK_THRESHOLDS['MEDIUM'] else "lower"
+        bullets_exp  = "".join(
+            f"<li style='margin-bottom:0.5rem;font-size:0.83rem;color:#c9d1d9;line-height:1.5;'>{line}</li>"
+            for line in explanation_lines
+        )
+
+        st.markdown(f"""
+        <div style="background:#1a1030;border:1px solid #bc8cff44;border-radius:8px;
+                    padding:1rem 1.25rem;margin-top:1rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+                <span style="font-size:1rem;">🔍</span>
+                <span style="font-weight:600;color:#bc8cff;font-size:0.9rem;">Prediction Explanation</span>
+            </div>
+            <p style="font-size:0.83rem;color:#8b949e;margin:0 0 0.6rem 0;">
+                This prediction was influenced primarily by the following clinical indicators:
+            </p>
+            <ul style="margin:0;padding-left:1.25rem;">
+                {bullets_exp}
+            </ul>
+            <p style="font-size:0.78rem;color:#6e7681;margin:0.75rem 0 0 0;font-style:italic;">
+                These factors have been associated with {outcome_word} rates of adverse outcomes
+                in similar historical patients.
+            </p>
+        </div>""", unsafe_allow_html=True)
+
     with col_rec:
         # st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<span style="color:#e6edf3;font-weight:600;">3. Recommendation</span>', unsafe_allow_html=True)
