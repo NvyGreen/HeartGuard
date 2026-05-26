@@ -274,12 +274,20 @@ def section_card(inner_html: str, extra_style: str = "") -> str:
 
 def info_pill(label: str, value: str, value_color: str = "#e6edf3",
               sub: str = "") -> str:
-    sub_html = f'<div style="font-size:0.72rem;color:#6e7681;">{sub}</div>' if sub else ""
-    return f"""<div class="info-pill">
-        <div class="pill-label">{label}</div>
-        <div class="pill-value" style="color:{value_color};">{value}</div>
-        {sub_html}
-    </div>"""
+    sub_html = (
+        f'<div style="font-size:0.72rem;color:#6e7681;margin-top:0.2rem;">{sub}</div>'
+        if sub else ""
+    )
+    return (
+        '<div style="background:#21262d;border:1px solid #30363d;border-radius:8px;'
+        'padding:0.75rem 1rem;">'
+        f'<div style="font-size:0.7rem;color:#8b949e;font-weight:600;'
+        f'text-transform:uppercase;letter-spacing:0.05em;">{label}</div>'
+        f'<div style="font-size:1rem;font-weight:600;color:{value_color};'
+        f'margin-top:0.25rem;">{value}</div>'
+        f'{sub_html}'
+        '</div>'
+    )
 
 
 # ── Factor bars ────────────────────────────────────────────────────────────────
