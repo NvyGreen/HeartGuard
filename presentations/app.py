@@ -1,12 +1,12 @@
 import streamlit as st
 
 from utils.ui_components import inject_global_css, render_sidebar
-import pages.overview           as overview_page
-import pages.patient_review     as patient_review_page
-import pages.model_performance  as model_performance_page
-import pages.feature_importance as feature_importance_page
-import pages.simulated_assessment as simulated_assessment_page
-import pages.about              as about_page
+import views.overview           as overview_page
+import views.patient_review     as patient_review_page
+import views.model_performance  as model_performance_page
+import views.feature_importance as feature_importance_page
+import views.simulated_assessment as simulated_assessment_page
+import views.about              as about_page
 
 st.set_page_config(
     page_title="Heart Failure Risk Stratification",
