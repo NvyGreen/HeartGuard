@@ -40,23 +40,21 @@ def _render_metric_cards(acc_v, prec_v, rec_v, f1_v, roc_v, spec_v) -> None:
             roc_badge = (f'<div style="font-size:0.75rem;font-weight:600;color:{q_color};'
                          f'margin-top:0.2rem;">{quality}</div>')
 
-        col.markdown(f"""
-        <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;
-             padding:1rem 0.75rem;text-align:left;">
-            <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.5rem;">
-                <div style="background:{color}22;border-radius:6px;padding:0.3rem 0.4rem;
-                     display:inline-flex;align-items:center;justify-content:center;">
-                    <span style="font-size:1rem;">{icon}</span>
-                </div>
-                <span style="font-size:0.72rem;font-weight:600;color:#8b949e;
-                     text-transform:uppercase;letter-spacing:0.04em;">{label}</span>
-            </div>
-            <div style="font-size:1.8rem;font-weight:700;color:{color};line-height:1.1;">{pct_str}</div>
-            <div style="font-size:0.75rem;color:#6e7681;margin-top:0.2rem;">{sub_str}</div>
-            {roc_badge}
-            <div style="height:2px;background:{color};border-radius:2px;margin-top:0.6rem;
-                 opacity:0.4;"></div>
-        </div>""", unsafe_allow_html=True)
+        card_html = (
+            f'<div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:1rem 0.75rem;text-align:left;">'
+            f'<div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.5rem;">'
+            f'<div style="background:{color}22;border-radius:6px;padding:0.3rem 0.4rem;display:inline-flex;align-items:center;justify-content:center;">'
+            f'<span style="font-size:1rem;">{icon}</span>'
+            f'</div>'
+            f'<span style="font-size:0.72rem;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:0.04em;">{label}</span>'
+            f'</div>'
+            f'<div style="font-size:1.8rem;font-weight:700;color:{color};line-height:1.1;">{pct_str}</div>'
+            f'<div style="font-size:0.75rem;color:#6e7681;margin-top:0.2rem;">{sub_str}</div>'
+            f'{roc_badge}'
+            f'<div style="height:2px;background:{color};border-radius:2px;margin-top:0.6rem;opacity:0.4;"></div>'
+            f'</div>'
+        )
+        col.markdown(card_html, unsafe_allow_html=True)
 
 
 def _render_roc_curve(roc_v: float) -> None:
