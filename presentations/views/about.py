@@ -11,8 +11,10 @@ def render() -> None:
 
     c1, c2, c3 = st.columns(3)
 
+    # ── Dataset Information ────────────────────────────────────────────────────
     with c1:
-        st.markdown("""<div class="section-card">
+        st.markdown("""
+        <div class="section-card">
             <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1rem;">
                 <div style="background:#0d1b2a;border-radius:8px;padding:0.5rem;font-size:1.25rem;">🗄️</div>
                 <b style="color:#e6edf3;">1. Dataset Information</b>
@@ -20,18 +22,36 @@ def render() -> None:
             <div style="font-size:0.85rem;color:#8b949e;margin-bottom:1rem;">
                 The model is built using the Heart Failure Clinical Records Dataset.
             </div>
-            <table class="styled-table">
+            <table class="styled-table" style="table-layout:fixed;width:100%;">
+                <colgroup>
+                    <col style="width:38%;">
+                    <col style="width:62%;">
+                </colgroup>
                 <tbody>
-                    <tr><td style="color:#8b949e;">Source</td>
-                        <td><b style="color:#e6edf3;">Kaggle</b></td></tr>
-                    <tr><td style="color:#8b949e;">File</td>
-                        <td><b style="color:#e6edf3;">heart_failure_clinical_records_dataset.csv</b></td></tr>
-                    <tr><td style="color:#8b949e;">Total Records</td>
-                        <td><b style="color:#e6edf3;">299</b></td></tr>
-                    <tr><td style="color:#8b949e;">Features</td>
-                        <td><b style="color:#e6edf3;">11 clinical indicators</b></td></tr>
-                    <tr><td style="color:#8b949e;">Target Variable</td>
-                        <td><b style="color:#e6edf3;">DEATH_EVENT (1 = Death, 0 = Survived)</b></td></tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">Source</td>
+                        <td><b style="color:#e6edf3;">Kaggle</b></td>
+                    </tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">File</td>
+                        <td style="word-break:break-all;overflow-wrap:anywhere;">
+                            <b style="color:#e6edf3;font-size:0.78rem;">
+                                heart_failure_clinical_records_dataset.csv
+                            </b>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">Total Records</td>
+                        <td><b style="color:#e6edf3;">299</b></td>
+                    </tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">Features</td>
+                        <td><b style="color:#e6edf3;">11 clinical indicators</b></td>
+                    </tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">Target Variable</td>
+                        <td><b style="color:#e6edf3;">DEATH_EVENT (1 = Death, 0 = Survived)</b></td>
+                    </tr>
                 </tbody>
             </table>
             <div class="info-box" style="margin-top:1rem;">
@@ -39,16 +59,8 @@ def render() -> None:
             </div>
         </div>""", unsafe_allow_html=True)
 
+    # ── Methodology ────────────────────────────────────────────────────────────
     with c2:
-        st.markdown("""<div class="section-card">
-            <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1rem;">
-                <div style="background:#12261e;border-radius:8px;padding:0.5rem;font-size:1.25rem;">⚙️</div>
-                <b style="color:#e6edf3;">2. Methodology</b>
-            </div>
-            <div style="font-size:0.85rem;color:#8b949e;margin-bottom:1rem;">
-                End-to-end workflow for building this risk stratification system.
-            </div>""", unsafe_allow_html=True)
-
         steps = [
             ("Data Loading & Validation",     "Load and validate the clinical dataset."),
             ("Data Preprocessing",            "Handle missing values, encode variables, prepare features."),
@@ -57,43 +69,83 @@ def render() -> None:
             ("Risk Scoring & Categorization", "Generate risk probability and categorize into Low / Medium / High."),
             ("Recommendation Engine",         "Provide risk-aware recommendations and explanations."),
         ]
-        for i, (title, desc) in enumerate(steps, 1):
-            st.markdown(f"""
-            <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem;align-items:flex-start;">
-                <div style="background:#3fb950;color:#0d1117;border-radius:50%;width:22px;height:22px;
-                     display:flex;align-items:center;justify-content:center;font-size:0.72rem;
-                     font-weight:700;flex-shrink:0;margin-top:2px;">{i}</div>
-                <div>
-                    <div style="font-weight:600;font-size:0.85rem;color:#e6edf3;">{title}</div>
-                    <div style="font-size:0.8rem;color:#8b949e;">{desc}</div>
-                </div>
-            </div>""", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
 
+        steps_html = "".join(
+            f'<div style="display:flex;gap:0.75rem;margin-bottom:0.75rem;align-items:flex-start;">'
+            f'<div style="background:#3fb950;color:#0d1117;border-radius:50%;width:22px;height:22px;'
+            f'display:flex;align-items:center;justify-content:center;font-size:0.72rem;'
+            f'font-weight:700;flex-shrink:0;margin-top:2px;">{i}</div>'
+            f'<div>'
+            f'<div style="font-weight:600;font-size:0.85rem;color:#e6edf3;">{title}</div>'
+            f'<div style="font-size:0.8rem;color:#8b949e;">{desc}</div>'
+            f'</div></div>'
+            for i, (title, desc) in enumerate(steps, 1)
+        )
+
+        st.markdown(f"""
+        <div class="section-card">
+            <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1rem;">
+                <div style="background:#12261e;border-radius:8px;padding:0.5rem;font-size:1.25rem;">⚙️</div>
+                <b style="color:#e6edf3;">2. Methodology</b>
+            </div>
+            <div style="font-size:0.85rem;color:#8b949e;margin-bottom:1rem;">
+                End-to-end workflow for building this risk stratification system.
+            </div>
+            {steps_html}
+        </div>""", unsafe_allow_html=True)
+
+    # ── AI Model Details ───────────────────────────────────────────────────────
     with c3:
-        st.markdown("""<div class="section-card">
+        st.markdown("""
+        <div class="section-card">
             <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1rem;">
                 <div style="background:#1a1030;border-radius:8px;padding:0.5rem;font-size:1.25rem;">🧠</div>
                 <b style="color:#e6edf3;">3. AI Model Details</b>
             </div>
-            <table class="styled-table">
+            <table class="styled-table" style="table-layout:fixed;width:100%;">
+                <colgroup>
+                    <col style="width:42%;">
+                    <col style="width:58%;">
+                </colgroup>
                 <tbody>
-                    <tr><td style="color:#8b949e;">Model</td>
-                        <td><b style="color:#e6edf3;">Random Forest</b></td></tr>
-                    <tr><td style="color:#8b949e;">Type</td>
-                        <td><b style="color:#e6edf3;">Binary Classification</b></td></tr>
-                    <tr><td style="color:#8b949e;">Target</td>
-                        <td><b style="color:#e6edf3;">DEATH_EVENT (1=Death, 0=Survived)</b></td></tr>
-                    <tr><td style="color:#8b949e;">Training</td>
-                        <td><b style="color:#e6edf3;">scikit-learn RandomForestClassifier</b></td></tr>
-                    <tr><td style="color:#8b949e;">Evaluation</td>
-                        <td><b style="color:#e6edf3;">Accuracy, Precision, Recall, F1, AUC-ROC</b></td></tr>
-                    <tr><td style="color:#8b949e;">Feature Importance</td>
-                        <td><b style="color:#e6edf3;">Gini impurity reduction</b></td></tr>
-                    <tr><td style="color:#8b949e;">Class Weighting</td>
-                        <td><b style="color:#e6edf3;">Balanced</b></td></tr>
-                    <tr><td style="color:#8b949e;">Trained On</td>
-                        <td><b style="color:#e6edf3;">Historical clinical records</b></td></tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">Model</td>
+                        <td><b style="color:#e6edf3;">Random Forest</b></td>
+                    </tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">Type</td>
+                        <td><b style="color:#e6edf3;">Binary Classification</b></td>
+                    </tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">Target</td>
+                        <td style="word-break:break-word;">
+                            <b style="color:#e6edf3;">DEATH_EVENT (1=Death, 0=Survived)</b>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">Training</td>
+                        <td style="word-break:break-word;">
+                            <b style="color:#e6edf3;">scikit-learn RandomForestClassifier</b>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">Evaluation</td>
+                        <td style="word-break:break-word;">
+                            <b style="color:#e6edf3;">Accuracy, Precision, Recall, F1, AUC-ROC</b>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">Feature Importance</td>
+                        <td><b style="color:#e6edf3;">Gini impurity reduction</b></td>
+                    </tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">Class Weighting</td>
+                        <td><b style="color:#e6edf3;">Balanced</b></td>
+                    </tr>
+                    <tr>
+                        <td style="color:#8b949e;vertical-align:top;">Trained On</td>
+                        <td><b style="color:#e6edf3;">Historical clinical records</b></td>
+                    </tr>
                 </tbody>
             </table>
         </div>""", unsafe_allow_html=True)
@@ -113,7 +165,8 @@ def render() -> None:
     tech_col, how_col = st.columns(2)
 
     with tech_col:
-        st.markdown("""<div class="section-card">
+        st.markdown("""
+        <div class="section-card">
             <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1rem;">
                 <span style="font-size:1.1rem;">💻</span>
                 <b style="color:#e6edf3;">4. Technology Stack</b>
@@ -148,7 +201,8 @@ def render() -> None:
         </div>""", unsafe_allow_html=True)
 
     with how_col:
-        st.markdown("""<div class="section-card">
+        st.markdown("""
+        <div class="section-card">
             <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1rem;">
                 <span style="font-size:1.1rem;">📖</span>
                 <b style="color:#e6edf3;">5. How to Use This App</b>

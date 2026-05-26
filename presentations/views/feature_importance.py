@@ -121,7 +121,7 @@ def _render_callouts(importance_df: pd.DataFrame) -> None:
 
     st.markdown("""
     <div style="background:#1a0d0d;border:1px solid #f8514933;border-radius:10px;
-         padding:1rem 1.25rem;margin-top:1rem;">
+         padding:1rem 1.25rem;margin-top:1rem;margin-bottom:1.25rem;">
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
             <span style="font-size:1.25rem;flex-shrink:0;">⚠️</span>
             <div>
