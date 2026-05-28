@@ -349,25 +349,33 @@ SIDEBAR_LOGO_HTML = """
 
 SIDEBAR_NAV_CSS = """
 <style>
-div[data-testid="stSidebar"] .stButton > button {
+div[data-testid="stSidebar"] div[data-testid="stButton"] button {
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 0.35rem 1rem !important;
     width: 100% !important;
-    text-align: left !important;
     background: transparent !important;
     border: none !important;
     border-radius: 8px !important;
-    padding: 0.6rem 1rem !important;
     color: #8b949e !important;
     font-size: 0.875rem !important;
     font-weight: 500 !important;
     margin-bottom: 2px !important;
     transition: background 0.15s !important;
 }
-div[data-testid="stSidebar"] .stButton > button:hover {
+div[data-testid="stSidebar"] div[data-testid="stButton"] button p {
+    margin: 0 !important;
+    text-align: left !important;
+    line-height: 1.2 !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+}
+div[data-testid="stSidebar"] div[data-testid="stButton"] button:hover {
     background: #21262d !important;
     color: #e6edf3 !important;
     border: none !important;
 }
-div[data-testid="stSidebar"] .nav-active .stButton > button {
+div[data-testid="stSidebar"] .nav-active div[data-testid="stButton"] button {
     background: #21262d !important;
     color: #e6edf3 !important;
     border-left: 3px solid #58a6ff !important;
@@ -398,7 +406,7 @@ def render_sidebar() -> str:
             is_active = st.session_state.page == key
             if is_active:
                 st.markdown('<div class="nav-active">', unsafe_allow_html=True)
-            if st.button(label, key=f"nav_{key}"):
+            if st.button(label, key=f"nav_{key}", use_container_width=True):  # ← ADD THIS
                 st.session_state.page = key
                 st.rerun()
             if is_active:
