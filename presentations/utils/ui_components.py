@@ -253,7 +253,7 @@ def kpi_card(label: str, value: str, color: str, sub: str = "", icon: str = "") 
     return f"""
     <div class="kpi-card">
         <div style="display:flex;align-items:center;gap:0.5rem;">
-            <span style="font-size:1.8rem;line-height:1;flex-shrink:0;">{icon}</span>
+            <span style="font-size:2.4rem;line-height:1;flex-shrink:0;">{icon}</span>
             <span class="kpi-label" style="margin:0;font-size:0.72rem;">{label}</span>
         </div>
         <div>

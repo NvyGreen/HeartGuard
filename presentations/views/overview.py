@@ -1,10 +1,9 @@
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
 from utils.constants import (
-    DATA_PATH, IMPORTANCE_PATH, METRICS_PATH, PREDICTIONS_PATH,
+    IMPORTANCE_PATH, METRICS_PATH, PREDICTIONS_PATH,
     FEATURE_LABELS, PLOTLY_LAYOUT, RISK_THRESHOLDS,
 )
 from utils.ui_components import (
@@ -17,19 +16,6 @@ from utils.ui_components import (
 def _metric(metrics_df: pd.DataFrame, name: str) -> float:
     row = metrics_df[metrics_df['Metric'] == name]
     return float(row['Mean'].values[0]) if len(row) else 0.0
-
-
-_COHORT_LAYOUT = dict(
-    paper_bgcolor="#161b22",
-    plot_bgcolor="#161b22",
-    font_color="#c9d1d9",
-    margin=dict(t=30, b=30, l=10, r=10),
-    height=280,
-    xaxis=dict(gridcolor="#30363d"),
-    yaxis=dict(gridcolor="#30363d"),
-)
-
-_GRADIENT = ['#3fb950', '#e3b341', '#f85149']
 
 
 # ── Sub-sections ───────────────────────────────────────────────────────────────
@@ -65,7 +51,7 @@ def _render_performance_strip(accuracy_val, precision_val, recall_val, f1_val, r
     for col, (icon, label, val, color, desc) in zip(st.columns(5), perf_defs):
         col.markdown(f"""
         <div class="section-card" style="text-align:center;padding:1.1rem 0.5rem;">
-            <div style="font-size:2rem;margin-bottom:0.35rem;">{icon}</div>
+            <div style="font-size:2.8rem;margin-bottom:0.35rem;">{icon}</div>
             <div style="font-size:0.7rem;font-weight:600;color:#8b949e;text-transform:uppercase;
                  letter-spacing:0.04em;margin-bottom:0.25rem;">{label}</div>
             <div style="font-size:1.6rem;font-weight:700;color:{color};line-height:1.1;">{val}</div>
@@ -188,118 +174,6 @@ def _render_key_insights(importance_df, patient_count, elevated_count,
     </div>""", unsafe_allow_html=True)
 
 
-def _render_cohort_patterns(df_full):
-    st.markdown('<span style="color:#e6edf3;font-size:1.05rem;font-weight:600;">'
-                'Cohort Risk Patterns</span>', unsafe_allow_html=True)
-    st.markdown('<span style="color:#8b949e;font-size:0.85rem;">'
-                'Mortality and high-risk trends across key clinical indicators.</span>',
-                unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Band definitions
-    df_full['ef_band'] = pd.cut(
-        df_full['ejection_fraction'],
-        bins=[0, 20, 30, 40, 55, 100],
-        labels=['≤20%', '21–30%', '31–40%', '41–55%', '>55%'],
-    )
-    df_full['sc_band'] = pd.cut(
-        df_full['serum_creatinine'],
-        bins=[0, 1.2, 2.0, 4.0, 100],
-        labels=['≤1.2', '1.2–2.0', '2.0–4.0', '>4.0'],
-    )
-    df_full['age_band'] = pd.cut(
-        df_full['age'],
-        bins=[0, 50, 60, 70, 80, 120],
-        labels=['<50', '50–60', '60–70', '70–80', '>80'],
-    )
-
-    ef_df  = (df_full.groupby('ef_band',  observed=True)['DEATH_EVENT']
-                     .mean().mul(100).reset_index()
-                     .rename(columns={'ef_band': 'EF Band', 'DEATH_EVENT': 'Mortality Rate (%)'}))
-    sc_df  = (df_full.groupby('sc_band',  observed=True)['DEATH_EVENT']
-                     .mean().mul(100).reset_index()
-                     .rename(columns={'sc_band': 'Creatinine Band', 'DEATH_EVENT': 'Mortality Rate (%)'}))
-    age_df = (df_full.groupby('age_band', observed=True)['DEATH_EVENT']
-                     .mean().mul(100).reset_index()
-                     .rename(columns={'age_band': 'Age Group', 'DEATH_EVENT': 'Mortality Rate (%)'}))
-
-    row1_col1, row1_col2, row1_col3 = st.columns(3)
-    charts = [
-        (row1_col1, ef_df,  'EF Band',         'Mortality Rate by Ejection Fraction',
-         'Lower ejection fraction bands show higher observed mortality rates.'),
-        (row1_col2, sc_df,  'Creatinine Band',  'Mortality Rate by Serum Creatinine',
-         'Elevated creatinine is associated with higher observed mortality.'),
-        (row1_col3, age_df, 'Age Group',        'Mortality Rate by Age Group',
-         'Mortality rate increases with age across the dataset.'),
-    ]
-    for col, data, x_col, title, note in charts:
-        with col:
-            st.markdown(f'<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">'
-                        f'{title}</span>', unsafe_allow_html=True)
-            fig = px.bar(data, x=x_col, y='Mortality Rate (%)',
-                         color='Mortality Rate (%)',
-                         color_continuous_scale=_GRADIENT)
-            fig.update_layout(**_COHORT_LAYOUT, coloraxis_showscale=False)
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown(info_box(note), unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    row2_col1, row2_col2 = st.columns(2)
-
-    # Condition comparison
-    conditions = {
-        'Diabetes':            'diabetes',
-        'High Blood Pressure': 'high_blood_pressure',
-        'Anaemia':             'anaemia',
-        'Smoking':             'smoking',
-    }
-    cond_rows = []
-    for label, col in conditions.items():
-        present = df_full[df_full[col] == 1]
-        cond_rows.append({
-            'Condition':          label,
-            'High Risk Rate (%)': round(
-                (present['probability'] >= RISK_THRESHOLDS['HIGH']).mean() * 100, 1
-            ),
-            'Mortality Rate (%)': round(present['DEATH_EVENT'].mean() * 100, 1),
-        })
-    cond_df = pd.DataFrame(cond_rows)
-
-    with row2_col1:
-        st.markdown('<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">'
-                    'High Risk Rate by Clinical Condition</span>', unsafe_allow_html=True)
-        fig_cond = px.bar(
-            cond_df.melt(id_vars='Condition', var_name='Metric', value_name='Rate (%)'),
-            x='Condition', y='Rate (%)', color='Metric', barmode='group',
-            color_discrete_map={
-                'High Risk Rate (%)': '#f85149',
-                'Mortality Rate (%)': '#e3b341',
-            },
-        )
-        fig_cond.update_layout(**{**_COHORT_LAYOUT, 'height': 300},
-                               legend=dict(orientation="h", y=1.1, font_color="#c9d1d9"))
-        st.plotly_chart(fig_cond, use_container_width=True)
-        st.markdown(info_box("Patients with these conditions show elevated high-risk "
-                             "and mortality rates."), unsafe_allow_html=True)
-
-    with row2_col2:
-        st.markdown('<span style="color:#e6edf3;font-weight:600;font-size:0.9rem;">'
-                    'Predicted Risk Score Distribution</span>', unsafe_allow_html=True)
-        fig_hist = px.histogram(df_full, x='probability', nbins=20,
-                                color_discrete_sequence=['#58a6ff'])
-        fig_hist.add_vline(x=RISK_THRESHOLDS['MEDIUM'], line_dash='dash',
-                           line_color='#e3b341', annotation_text='Medium threshold',
-                           annotation_font_color='#e3b341')
-        fig_hist.add_vline(x=RISK_THRESHOLDS['HIGH'], line_dash='dash',
-                           line_color='#f85149', annotation_text='High threshold',
-                           annotation_font_color='#f85149')
-        fig_hist.update_layout(**{**_COHORT_LAYOUT, 'height': 300},
-                               xaxis_title='Predicted Probability',
-                               yaxis_title='Patient Count')
-        st.plotly_chart(fig_hist, use_container_width=True)
-        st.markdown(info_box("Dashed lines show Medium (0.40) and High (0.70) risk thresholds."),
-                    unsafe_allow_html=True)
-
 
 # ── Public entry point ─────────────────────────────────────────────────────────
 
@@ -340,11 +214,6 @@ def render() -> None:
                          observed_mortality, recall_val, roc_val)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    df_full = pd.read_csv(DATA_PATH)
-    df_full['probability'] = predictions_df['probability']
-    _render_cohort_patterns(df_full)
-
-    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(info_box("This dashboard provides an overview of model predictions and historical "
                          "data analysis for educational and research purposes only."),
                 unsafe_allow_html=True)
