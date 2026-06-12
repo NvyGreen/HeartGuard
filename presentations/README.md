@@ -1,1 +1,0 @@
-**DISCLAIMER**: This tool is for educational/demo use and should not be taken as medical advice
