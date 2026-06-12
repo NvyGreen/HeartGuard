@@ -1,120 +1,144 @@
-# clinical-workflow-ai-general-project
+# HeartGuard — AI-Assisted Heart Failure Risk Stratification & Recommendation System
+Educational clinical decision-support system that uses machine learning and explainable healthcare analytics to identify patients whose clinical patterns resemble historical higher-risk heart failure cases.
 
-## Repository Folder Structure
 
-| `data/` | Stores datasets for the projects — will be added later in the quarter |
+## Description
+HeartGuard is a machine learning-based healthcare analytics application designed to analyze historical heart failure patient data and estimate adverse outcome risk using clinical indicators such as ejection fraction, serum creatinine, sodium levels, diabetes status, and age.  
+The system generates risk predictions, explainable insights, and rule-based recommendation guidance to demonstrate how AI-assisted analytics may support monitoring prioritization and clinical review workflows.
 
-| `notebooks/` | Coding and model notebooks — this is where your actual project code goes |
 
-| `docs/` | Plan and document your project in plain writing — start here before anything else |
+## Problem Statement
+Heart failure patients may experience rapid clinical deterioration, but identifying high-risk patients early can be difficult when clinicians must manually evaluate multiple clinical indicators and historical patterns.  
+Traditional assessment workflows rely heavily on physician interpretation and may not systematically leverage historical outcome data to support prioritization and monitoring decisions.
 
-| `workflow-diagrams/` | Upload visual maps of your clinical workflow — a diagram showing how your AI fits into a real hospital process |
 
-| `presentations/` | 
+## Solution Overview
+The system uses supervised machine learning to analyze patient clinical indicators and compare them against historical outcome patterns associated with elevated heart failure risk.  
+Based on prediction results, the application:
+- estimates adverse outcome probability
+- assigns Low, Medium, or High risk categories
+- generates recommendation guidance
+- highlights top contributing clinical risk factors
 
-## Getting started
 
-### Step 1 - Fork & Clone the Repository
+## System Workflow / ML Pipeline
+1. Load and preprocess historical heart failure dataset
+2. Clean and validate clinical features
+3. Train classification model using supervised learning
+4. Generate risk probability predictions
+5. Categorize patients into risk groups
+6. Produce explainable prediction insights
+7. Display results through an interactive Streamlit dashboard
 
-Click the **Fork** button at the top right of the repo page. This allows you to create own copy under you Github account
 
-Then clone it to your computer:
+## Key Features
+- AI-assisted heart failure risk prediction
+- Low / Medium / High patient risk categorization
+- Explainable prediction insights using feature importance
+- Rule-based clinical recommendation guidance
+- Interactive Streamlit dashboard interface
+- Historical outcome pattern analysis
+- Clinical feature visualization and monitoring support
 
-Open **Terminal** (**Mac**)
-Open **Command Prompt** (**Windows**)
 
-```bash
-# Replace YOUR-USERNAME with your actual GitHub username
-git clone https://github.com/YOUR-USERNAME/clinicial-workflow-ai-general-project.git
+## Results / Model Performance
+The system was evaluated using historical heart failure clinical records and standard classification metrics.  
+Evaluation outputs include:
+- Accuracy
+- Precision
+- Recall
+- F1-score
+- Prediction probability analysis
+- Feature importance ranking
 
-# Navigate into the folder
-cd clinicial-workflow-ai-general-project
+Key contributing risk factors identified by the model include:
+- ejection fraction
+- serum creatinine
+- serum sodium
+- age
+
+
+## Tech Stack
+| Layer | Technologies |
+| -------- | -------- |
+| Programming | Python |
+| Machine Learning | Scikit-learn |
+| Data Processing | Pandas, NumPy |
+| Visualization | Matplotlib |
+| UI Framework | Streamlit |
+| Model Serialization | Pickle |
+| Development Tools | Jupyter Notebook, Git |
+
+
+## Architecture Diagram
+The system architecture consists of:
+- clinical dataset ingestion
+- preprocessing pipeline
+- machine learning prediction engine
+- explainability layer
+- recommendation generation module
+- Streamlit dashboard interface
+
+The workflow demonstrates how AI-assisted analytics can integrate into clinical decision-support scenarios using historical patient data.
+
+
+## Clinical Features / Data Dictionary
+The model uses demographic, laboratory, cardiovascular, and comorbidity-related clinical indicators including:
+- age
+- anaemia
+- diabetes
+- ejection fraction
+- serum creatinine
+- serum sodium
+- platelets
+- smoking status
+- high blood pressure
+- follow-up duration
+
+Detailed field definitions and application-generated outputs are documented in `docs/data_dictionary.md`.
+
+
+## Demo / How To Use
+1. Launch the [Streamlit application](https://clinical-workflow-ai-general-project-atllz5s7tcbgndqqmb7fwy.streamlit.app/)
+2. Navigate to the Simulated Assessment page
+3. Enter patient clinical indicators
+4. Review generated risk probability and category
+5. Analyze recommendation guidance and contributing risk factors
+
+The application demonstrates how clinical indicators may be analyzed using machine learning-assisted healthcare analytics workflows
+
+
+## Screenshots
+TBA
+
+
+## Repository Structure
+TBA
+
+
+## Setup Instructions
+```
+# Clone repository
+git clone <repository-url>
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run Streamlit application
+streamlit run presentations/app.py
 ```
 
-### Step 2 — (Optional) Create a New Branch
 
-If you want to keep different parts of your project separate, you can create a
-branch. This is like making a separate workspace inside your fork.
+## Challenges & Lessons Learned
+Key challenges encountered during development included:
+- selecting clinically meaningful features
+- balancing model simplicity and interpretability
+- designing explainable prediction outputs
+- translating prediction probabilities into understandable risk categories
 
-```bash
-git checkout -b your-branch-name
-```
+The project also highlighted the importance of transparency and explainability in healthcare AI workflows.
 
-If you created a new branch, push it to GitHub right away:
-```bash
-git push origin your-branch-name
-```
 
-### Step 3 - Make, Test, and Save your Changes
-
-Edit your files, then before saving make sure:
-- Your notebook runs without errors (Restart & Run All in Jupyter)
-
-Once you're happy with your changes, open your terminal and run these commands in order:
-
-**Stage** — tell Git which files you want to save:
-```bash
-git add .
-```
-
-**Commit** — write a short note describing what you did:
-```bash
-git commit -m "your short description here"
-```
-
-Good commit message examples:
-```bash
-git commit -m "Add data exploration notebook for patient triage dataset"
-git commit -m "Update project doc with AI inputs and outputs"
-git commit -m "Upload current workflow diagram"
-```
-
-**Push** — upload your changes to GitHub:
-```bash
-git push
-```
-
-### Step 4 — Sync Your Fork With the Main Repo
-
-If CareTech leads push updates to the main repo (such as new datasets or
-templates), you'll want to pull in those changes without starting over.
-Open your terminal and run:
-
----
-
-#### Option A — Sync on GitHub Website (Easier)
-
-1. Go to your forked repository on GitHub
-2. Click the **"Sync fork"** button near the top of the page
-3. Click **"Update branch"**
-
-That's it! Your fork is now up to date. ✅
-
----
-
-#### Option B — Sync via Terminal
-
-**1. Add the main repo as "upstream" — only do this once:**
-```bash
-git remote add upstream https://github.com/CareTech-General/clinicial-workflow-ai-general-project.git
-```
-
-**2. Fetch the latest updates from the main repo:**
-```bash
-git fetch upstream
-```
-
-**3. Switch to your main branch:**
-```bash
-git checkout main
-```
-
-**4. Merge the updates into your copy:**
-```bash
-git merge upstream/main
-```
-
-**5. Push the synced changes to your fork:**
-```bash
-git push origin main
-```
+## Disclaimer
+This project is intended for educational and research demonstration purposes only.  
+The generated predictions, recommendations, and explainability outputs are not intended for medical diagnosis, treatment decisions, or replacement of professional clinical judgment.
