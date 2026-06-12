@@ -43,13 +43,6 @@ Based on prediction results, the application:
 
 ## Results / Model Performance
 The system was evaluated using historical heart failure clinical records and standard classification metrics.  
-Evaluation outputs include:
-- Accuracy
-- Precision
-- Recall
-- F1-score
-- Prediction probability analysis
-- Feature importance ranking
 
 | Metric | Score |
 | -------- | -------- |
@@ -89,10 +82,10 @@ Risk tiers are assigned by probability: **High ≥ 0.70**, **Medium ≥ 0.40**, 
 ### Components
 | Layer | Responsibilities | Where |
 | -------- | -------- | -------- |
-| Constants | Feature list, thresholds, labels, normal ranges | `utils/constants.py` |
-| Prediction | Loads the model, scores a patient, assigns risk tier | `services/prediction_service.py` |
-| Explanation | Computes contributing factors and risk flags from inputs | `services/explanation_service.py` |
-| Recommendation | Maps risk tier to rule-based guidance | `services/recommendation_service.py` |
+| Constants | Feature list, thresholds, labels, normal ranges | `presentations/utils/constants.py` |
+| Prediction | Loads the model, scores a patient, assigns risk tier | `presentations/services/prediction_service.py` |
+| Explanation | Computes contributing factors and risk flags from inputs | `presentations/services/explanation_service.py` |
+| Recommendation | Maps risk tier to rule-based guidance | `presentations/services/recommendation_service.py` |
 | Interface | Patient input, results, and feature-importance views | Streamlit app |
 
 ### Design Decisions
@@ -104,7 +97,7 @@ Risk tiers are assigned by probability: **High ≥ 0.70**, **Medium ≥ 0.40**, 
 
 ### Known Limitations & Next Steps
 - **No automated tests yet.** The explanation and threshold logic has real branching that's worth unit-testing; this is the first thing I'd add.
-- **Thresholds duplicated in places.** Some clinical cutoffs appear in more than one module; I'd centralize them in `constants.py` as a single source of truth.
+- **Thresholds duplicated in places.** Some clinical cutoffs appear in more than one module; I'd centralize them in `presentations/utils/constants.py` as a single source of truth.
 - **Baseline model on a public dataset.** Trained on the UCI heart-failure clinical records (299 patients); the focus was clean architecture and a working end-to-end app rather than maximizing model performance.
 
 
