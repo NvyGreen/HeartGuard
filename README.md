@@ -1,4 +1,4 @@
-# HeartGuard — AI-Assisted Heart Failure Risk Stratification & Recommendation System
+# [HeartGuard — AI-Assisted Heart Failure Risk Stratification & Recommendation System](https://clinical-workflow-ai-general-project-atllz5s7tcbgndqqmb7fwy.streamlit.app/)
 Educational clinical decision-support system that uses machine learning and explainable healthcare analytics to identify patients whose clinical patterns resemble historical higher-risk heart failure cases.
 
 
@@ -51,6 +51,15 @@ Evaluation outputs include:
 - Prediction probability analysis
 - Feature importance ranking
 
+| Metric | Score |
+| -------- | -------- |
+| Accuracy | 0.7400 |
+| Precision | 0.5930 |
+| Recall | 0.6410 |
+| F1 Score | 0.6110 |
+| ROC-AUC | 0.7850 |
+| Specificity | 0.9290 |
+
 Key contributing risk factors identified by the model include:
 - ejection fraction
 - serum creatinine
@@ -80,6 +89,7 @@ The system architecture consists of:
 - Streamlit dashboard interface
 
 The workflow demonstrates how AI-assisted analytics can integrate into clinical decision-support scenarios using historical patient data.
+<img src="screenshots/architecture_diagram.png" alt="Diagram of system architecture" width=500>
 
 
 ## Clinical Features / Data Dictionary
@@ -143,10 +153,11 @@ HeartGuard/
 │   │   ├── model_performance.py
 │   │   ├── overview.py
 │   │   ├── patient_review.py
-│   │   └── simmulated_assessment.py
+│   │   └── simulated_assessment.py
 │   └── app.py
 ├── screenshots/
 │   ├── about.png
+│   ├── architecture_diagram.png
 │   ├── feature_importance.png
 │   ├── model_performance.png
 │   ├── overview.png
@@ -162,10 +173,12 @@ HeartGuard/
 ## Setup Instructions
 ```
 # Clone repository
-git clone <repository-url>
+git clone https://github.com/NvyGreen/HeartGuard.git
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Copy .env.example to .env and configure as needed
 
 # Run Streamlit application
 streamlit run presentations/app.py
