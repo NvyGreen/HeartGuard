@@ -91,8 +91,8 @@ Risk tiers are assigned by probability: **High ≥ 0.70**, **Medium ≥ 0.40**, 
 | -------- | -------- | -------- |
 | Constants | Feature list, thresholds, labels, normal ranges | `utils/constants.py` |
 | Prediction | Loads the model, scores a patient, assigns risk tier | `services/prediction_service.py` |
-| Explanation | Computes contributing factors and risk flags from inputs | `Computes contributing factors and risk flags from inputs` |
-| Recommendation | Maps risk tier to rule-based guidance | `Maps risk tier to rule-based guidance` |
+| Explanation | Computes contributing factors and risk flags from inputs | `services/explanation_service.py` |
+| Recommendation | Maps risk tier to rule-based guidance | `services/recommendation_service.py` |
 | Interface | Patient input, results, and feature-importance views | Streamlit app |
 
 ### Design Decisions
