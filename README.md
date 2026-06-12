@@ -89,7 +89,7 @@ The system architecture consists of:
 - Streamlit dashboard interface
 
 The workflow demonstrates how AI-assisted analytics can integrate into clinical decision-support scenarios using historical patient data.
-<img src="screenshots/architecture_diagram.png" alt="Diagram of system architecture" width=500>
+<img src="screenshots/heartguard_architecture.png" alt="Diagram of system architecture" width=500>
 
 
 ## Clinical Features / Data Dictionary
@@ -157,8 +157,8 @@ HeartGuard/
 │   └── app.py
 ├── screenshots/
 │   ├── about.png
-│   ├── architecture_diagram.png
 │   ├── feature_importance.png
+│   ├── heartguard_architecture.png
 │   ├── model_performance.png
 │   ├── overview.png
 │   ├── patient_review.png
