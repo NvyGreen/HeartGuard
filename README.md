@@ -109,11 +109,54 @@ The application demonstrates how clinical indicators may be analyzed using machi
 
 
 ## Screenshots
-TBA
+<img src="screenshots/overview.png" alt="Screenshot of Overview page" width=500> <img src="screenshots/patient_review.png" alt="Screenshot of Patient Review page" width=500>
+<img src="screenshots/model_performance.png" alt="Screenshot of Model Performance page" width=500> <img src="screenshots/feature_importance.png" alt="Screenshot of Feature Importance page" width=500>
+<img src="screenshots/simulated_assessment.png" alt="Screenshot of Simulated Assessment page" width=500> <img src="screenshots/about.png" alt="Screenshot of About page" width=500>
 
 
 ## Repository Structure
-TBA
+```
+HeartGuard/
+├── data/
+│   └── heart_failure_clinical_records_dataset.csv
+├── docs/
+│   └── data_dictionary.md
+├── notebooks/
+│   ├── feature_importance.csv
+│   ├── metrics.csv
+│   ├── pipeline.pkl
+│   ├── predictions.csv
+│   └── template_heart_failure.ipynb
+├── presentations/
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── explanation_service.py
+│   │   ├── prediction_service.py
+│   │   └── recommendation_service.py
+│   ├── util/
+│   │   ├── __init__.py
+│   │   ├── constants.py
+│   │   └── ui_components.py
+│   ├── views/
+│   │   ├── about.py
+│   │   ├── feature_importance.py
+│   │   ├── model_performance.py
+│   │   ├── overview.py
+│   │   ├── patient_review.py
+│   │   └── simmulated_assessment.py
+│   └── app.py
+├── screenshots/
+│   ├── about.png
+│   ├── feature_importance.png
+│   ├── model_performance.png
+│   ├── overview.png
+│   ├── patient_review.png
+│   └── simulated_assessment.png
+├── .env.example
+├── .gitignore
+├── README.md
+└── requirements.txt
+```
 
 
 ## Setup Instructions
