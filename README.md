@@ -79,17 +79,34 @@ Key contributing risk factors identified by the model include:
 | Development Tools | Jupyter Notebook, Git |
 
 
-## Architecture Diagram
-The system architecture consists of:
-- clinical dataset ingestion
-- preprocessing pipeline
-- machine learning prediction engine
-- explainability layer
-- recommendation generation module
-- Streamlit dashboard interface
-
-The workflow demonstrates how AI-assisted analytics can integrate into clinical decision-support scenarios using historical patient data.
+## Architecture
 <img src="screenshots/heartguard_architecture.png" alt="Diagram of system architecture" width=500>
+
+When a patient is scored, the flow runs: input features are received and reordered to match the model's expected feature order, passed to the trained Random Forest, which returns a mortality-risk probability. That probability is mapped to a risk tier, and the explanation and recommendation layers generate the contributing factors and rule-based guidance, all surfaced in the Streamlit dashboard.  
+
+Risk tiers are assigned by probability: **High ≥ 0.70**, **Medium ≥ 0.40**, otherwise **Low**.
+
+### Components
+| Layer | Responsibilities | Where |
+| -------- | -------- | -------- |
+| Constants | Feature list, thresholds, labels, normal ranges | `utils/constants.py` |
+| Prediction | Loads the model, scores a patient, assigns risk tier | `services/prediction_service.py` |
+| Explanation | Computes contributing factors and risk flags from inputs | `Computes contributing factors and risk flags from inputs` |
+| Recommendation | Maps risk tier to rule-based guidance | `Maps risk tier to rule-based guidance` |
+| Interface | Patient input, results, and feature-importance views | Streamlit app |
+
+### Design Decisions
+- **Service-layer separation** — Scoring, explanation, and recommendation logic live in separate modules rather than in the UI, because they change for different reasons and stay independently testable.
+- **Model behind a thin interface** — The app calls a single scoring function and never touches scikit-learn directly, so the model can be retrained or swapped without changing application code.
+- **Cached model loading** — The trained pipeline is loaded once and reused (via `lru_cache`) instead of being re-read from disk on every prediction.
+- **Schema-safe inference** — Inputs are reordered to match the model's expected feature order before prediction, preventing silent feature-misalignment errors.
+- **Explain, not diagnose** — The explanation layer surfaces the factors that influenced a score, with a disclaimer, and deliberately stops short of diagnostic claims — a safety boundary treated as a design constraint.
+
+### Known Limitations & Next Steps
+- **No automated tests yet.** The explanation and threshold logic has real branching that's worth unit-testing; this is the first thing I'd add.
+- **Thresholds duplicated in places.** Some clinical cutoffs appear in more than one module; I'd centralize them in `constants.py` as a single source of truth.
+- **Baseline model on a public dataset.** Trained on the UCI heart-failure clinical records (299 patients); the focus was clean architecture and a working end-to-end app rather than maximizing model performance.
+
 
 
 ## Clinical Features / Data Dictionary
