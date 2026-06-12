@@ -153,7 +153,7 @@ HeartGuard/
 │   │   ├── explanation_service.py
 │   │   ├── prediction_service.py
 │   │   └── recommendation_service.py
-│   ├── util/
+│   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── constants.py
 │   │   └── ui_components.py
