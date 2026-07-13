@@ -96,7 +96,6 @@ Risk tiers are assigned by probability: **High ≥ 0.70**, **Medium ≥ 0.40**, 
 - **Explain, not diagnose** — The explanation layer surfaces the factors that influenced a score, with a disclaimer, and deliberately stops short of diagnostic claims — a safety boundary treated as a design constraint.
 
 ### Known Limitations & Next Steps
-- **No automated tests yet.** The explanation and threshold logic has real branching that's worth unit-testing; this is the first thing I'd add.
 - **Thresholds duplicated in places.** Some clinical cutoffs appear in more than one module; I'd centralize them in `presentations/utils/constants.py` as a single source of truth.
 - **Baseline model on a public dataset.** Trained on the UCI heart-failure clinical records (299 patients); the focus was clean architecture and a working end-to-end app rather than maximizing model performance.
 
@@ -192,6 +191,16 @@ pip install -r requirements.txt
 
 # Run Streamlit application
 streamlit run presentations/app.py
+```
+
+
+## Testing
+
+Unit tests cover risk-tier thresholds, abnormality scoring, risk flags, explanation logic, and recommendation mapping.
+
+```bash
+cd presentations
+python -m pytest tests/
 ```
 
 
