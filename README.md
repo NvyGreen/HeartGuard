@@ -42,22 +42,62 @@ Based on prediction results, the application:
 
 
 ## Results / Model Performance
-The system was evaluated using historical heart failure clinical records and standard classification metrics.  
 
-| Metric | Score |
-| -------- | -------- |
-| Accuracy | 0.7400 |
-| Precision | 0.5930 |
-| Recall | 0.6410 |
-| F1 Score | 0.6110 |
-| ROC-AUC | 0.7850 |
-| Specificity | 0.9290 |
+Metrics use repeated stratified 5-fold cross-validation (20 repeats, 100
+out-of-fold estimates), not a single train/test split. 95% CIs are the
+2.5/97.5 percentiles across folds.
 
-Key contributing risk factors identified by the model include:
-- ejection fraction
-- serum creatinine
-- serum sodium
-- age
+| Metric    | Mean  | 95% CI          |
+| --------- | ----- | --------------- |
+| ROC-AUC   | 0.784 | [0.662, 0.894]  |
+| Accuracy  | 0.740 | [0.633, 0.841]  |
+| F1        | 0.610 | [0.447, 0.759]  |
+| Precision | 0.592 | [0.436, 0.774]  |
+| Recall    | 0.640 | [0.421, 0.842]  |
+
+The wide intervals reflect the small cohort (299 patients, ~96 events) and
+are themselves the motivation for the external validation below.
+
+Key contributing risk factors: ejection fraction, serum creatinine,
+serum sodium, and age.
+
+## Evaluation & Validation
+
+Two evaluation steps go beyond the standard single-split baseline. Both are
+reproducible: `notebooks/evaluate_leakage.py` and
+`notebooks/external_validation.py`.
+
+### Target-leakage audit
+
+The dataset includes `time` (follow-up duration). Including it as a feature
+inflates ROC-AUC from 0.784 to 0.914 (+0.13) and F1 by +0.15. The inflation
+is leakage, not signal: `time` alone accounts for ~43% of feature importance
+and correlates −0.53 with the outcome, because death truncates the
+observation window — and follow-up duration is undefined at real prediction
+time. `time` is therefore excluded from the model.
+
+### External validation on MIMIC-IV
+
+The model was validated against an independent heart-failure cohort of
+31,369 patients extracted from MIMIC-IV (a US ICU population), versus the
+299-patient UCI cohort (Faisalabad, Pakistan). Ejection fraction and CPK
+were unavailable in MIMIC, so both models use the 9 shared features.
+
+| Experiment                        | ROC-AUC | 95% CI          |
+| --------------------------------- | ------- | --------------- |
+| UCI internal (9 shared features)  | 0.717   | [0.586, 0.872]  |
+| Train UCI → test MIMIC (31,369)   | 0.651   | [0.641, 0.661]  |
+| Train MIMIC → test UCI (299)      | 0.728   | [0.669, 0.790]  |
+
+**Finding:** discrimination transfers across a different country and care
+setting — ROC-AUC drops only 0.066 (0.717 → 0.651) on 31,369 unseen
+patients. Calibration does not: F1 falls sharply because MIMIC's event rate
+(9.5%) is far below UCI's (32%), so a threshold tuned on UCI over-flags on
+MIMIC. In short, the model *ranks* risk well across sites but its decision
+threshold needs recalibration per population.
+
+> The MIMIC-IV cohort is credentialed data under a PhysioNet Data Use
+> Agreement and is not included in this repository.
 
 
 ## Tech Stack
@@ -97,7 +137,7 @@ Risk tiers are assigned by probability: **High ≥ 0.70**, **Medium ≥ 0.40**, 
 
 ### Known Limitations & Next Steps
 - **Thresholds duplicated in places.** Some clinical cutoffs appear in more than one module; I'd centralize them in `presentations/utils/constants.py` as a single source of truth.
-- **Baseline model on a public dataset.** Trained on the UCI heart-failure clinical records (299 patients); the focus was clean architecture and a working end-to-end app rather than maximizing model performance.
+- **Baseline model on a public dataset.** External validation on MIMIC-IV (31,369 patients) shows discrimination generalizes but the risk threshold needs per-population recalibration.
 
 
 
@@ -112,9 +152,9 @@ The model uses demographic, laboratory, cardiovascular, and comorbidity-related 
 - platelets
 - smoking status
 - high blood pressure
-- follow-up duration
+- follow-up duration *(present in the dataset but excluded from the model — see leakage audit)*
 
-Detailed field definitions and application-generated outputs are documented in `docs/data_dictionary.md`.
+Detailed field definitions and application-generated outputs are documented in `docs/data-dictionary.md`.
 
 
 ## Demo / How To Use
@@ -139,7 +179,7 @@ HeartGuard/
 ├── data/
 │   └── heart_failure_clinical_records_dataset.csv
 ├── docs/
-│   └── data_dictionary.md
+│   └── data-dictionary.md
 ├── notebooks/
 │   ├── feature_importance.csv
 │   ├── metrics.csv
